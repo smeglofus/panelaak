@@ -87,7 +87,6 @@ export default function Building({ game, selected, onSelectFlat }: Props) {
           <div className="entrance">
             <div className="house-number">{CS.ui.houseNumber}</div>
             {game.milestones.vzornyDum && <div className="plaque">{CS.ui.plaque}</div>}
-            <span className="ground-label entrance-label">{CS.ui.entrance}</span>
             <div className="canopy" />
             <div className="door" />
           </div>

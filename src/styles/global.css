@@ -506,8 +506,8 @@ button {
 
 .house-number {
   position: absolute;
-  top: 8px;
-  left: 12px;
+  bottom: 28px;
+  left: 10px;
   background: #1e4f8f;
   color: #fff;
   font-size: 9px;
@@ -519,18 +519,20 @@ button {
 
 .plaque {
   position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 72px;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
   background: var(--red);
   color: #f7e7b0;
-  font-size: 6.5px;
+  font-size: 6px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-align: center;
   text-transform: uppercase;
-  padding: 4px 3px;
+  padding: 3px 2px;
   border: 2px solid #e8c96a;
+  line-height: 1.5;
 }
 
 .ground-label {
@@ -539,12 +541,6 @@ button {
   letter-spacing: 2px;
   color: #45453f;
   font-weight: 600;
-}
-
-.entrance-label {
-  bottom: 76px;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .kocarkarna-window {
@@ -570,9 +566,10 @@ button {
 }
 
 .klepadlo {
+  /* Positioned against .building-wrap — stands on the pavement next to the house. */
   position: absolute;
-  right: 14%;
-  bottom: -4px;
+  left: -116px;
+  bottom: -2px;
   z-index: 0;
 }
 
