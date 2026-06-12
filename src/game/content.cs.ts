@@ -46,6 +46,27 @@ export const CS = {
     plaque: 'VZORNÝ DŮM SOCIALISTICKÉ PÉČE',
     flatLabel: (n: number) => `byt ${n}`,
     floorLabel: (n: number) => `${n}. patro`,
+    milestoneReward: (kcs: string) => `Odměna od OPBH: ${kcs}.`,
+    brigade: 'Akce Z',
+    brigadeAction: 'Přiložit ruku k dílu',
+    brigadeHint: 'Dobrovolně povinné zvelebování okolí domu.',
+    energy: 'Elán',
+    kronika: 'Kronika domu',
+    kronikaEmpty: 'Zatím se nic nestalo. To se změní.',
+    help: 'Nápověda',
+  },
+
+  help: {
+    title: 'Jak vést panelák',
+    tips: [
+      'Nájemníci platí nájem každou sekundu — čím spokojenější, tím víc. Klikněte na byt a uvidíte, kdo v něm bydlí.',
+      'Za vydělané Kčs stavějte patra, opravujte výtah a prasklé trubky a kupujte vylepšení na nástěnce vpravo.',
+      'Nemáte na první patro? Akce Z: dokud máte elán, klikejte a přivydělejte si. Elán se obnovuje sám.',
+      'Každý nájemník je jiný: vekslák platí 1,5×, ale přitahuje pozornost. Paní Vlasta se neodstěhuje nikdy. Nikdy.',
+      'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
+      'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
+    ],
+    ok: 'Rozumím, soudruzi',
   },
 
   archetypes: {
@@ -121,6 +142,9 @@ export const CS = {
     mejdan: (floor: number) =>
       `Mejdan u Lojzy. Michal David do tří do rána. ${floor}. patro nespí.`,
     bananas: 'V Jednotě dnes mají banány. Celý dům má důvod žít.',
+    melouch: (flat: string) =>
+      `Melouch. Kamarád švagra „spravil“ trubku (${flat}). Kupodivu to drží.`,
+    jitrnice: 'Soudružka jeřábnice přivezla z venkova jitrnice. Celý dům voní zabíjačkou.',
     satelliteReported: (kcs: string) =>
       `Soused to nahlásil. Satelit zabaven, pokuta ${kcs}. Anténa oficiálně nikdy neexistovala.`,
     schuzeTitle: 'Domovní schůze',

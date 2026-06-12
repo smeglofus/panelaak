@@ -17,14 +17,19 @@ import {
   occupiedCount,
 } from './state';
 import {
+  BRIGADE_ENERGY_MAX,
+  BRIGADE_ENERGY_REGEN,
   CELLAR_RENT_MULT,
   COUPLE_ELEVATOR_EXTRA_PENALTY,
+  EARLY_MOVE_IN_BOOST,
+  EARLY_MOVE_IN_MAX_OCCUPIED,
   ELEVATOR_BREAK_CHANCE,
   ELEVATOR_BROKEN_TARGET_PENALTY,
   ELEVATOR_DECAY_MULT,
   ELEVATOR_MIN_FLOORS,
   ELEVATOR_NDR_BREAK_MULT,
   FLATS_PER_FLOOR,
+  formatKcs,
   HAPPINESS_BASE_TARGET,
   HAPPINESS_DRIFT_RATE,
   HOT_WATER_TARGET_PENALTY,
@@ -32,6 +37,7 @@ import {
   LEAK_CHANCE,
   LEAK_TARGET_PENALTY,
   MAX_FLOORS,
+  MILESTONE_REWARDS,
   MOVE_OUT_GRACE_SECONDS,
   MOVE_OUT_HAPPINESS_THRESHOLD,
   moveInChance,
@@ -123,7 +129,9 @@ function processMoveOuts(s: GameState): GameState {
 function processMoveIns(s: GameState, rng: Rng): GameState {
   for (const flat of mainBuilding(s).flats) {
     if (flat.tenant) continue;
-    if (!rng.chance(moveInChance(s.reputation))) continue;
+    const earlyBoost =
+      occupiedCount(s) < EARLY_MOVE_IN_MAX_OCCUPIED ? EARLY_MOVE_IN_BOOST : 1;
+    if (!rng.chance(moveInChance(s.reputation) * earlyBoost)) continue;
     const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS);
     const b = mainBuilding(s);
     const flats = b.flats.map((f) => (f.index === flat.index ? { ...f, tenant } : f));
@@ -205,12 +213,19 @@ const MILESTONE_DEFS: readonly MilestoneDef[] = [
 function checkMilestones(s: GameState): GameState {
   for (const def of MILESTONE_DEFS) {
     if (!s.milestones[def.id] && def.achieved(s)) {
+      const reward = MILESTONE_REWARDS[def.id];
       s = {
         ...s,
         milestones: { ...s.milestones, [def.id]: true },
+        money: s.money + reward,
+        totalEarned: s.totalEarned + reward,
         reputation: clamp(s.reputation + REP_MILESTONE, 0, 100),
       };
-      s = addLog(s, 'milestone', CS.milestones[def.id].toast);
+      s = addLog(
+        s,
+        'milestone',
+        `${CS.milestones[def.id].toast} ${CS.ui.milestoneReward(formatKcs(reward))}`,
+      );
     }
   }
   return s;
@@ -221,7 +236,11 @@ export function tick(prev: GameState): GameState {
   if (prev.pendingChoice) return prev;
 
   const rng = createRng(prev.rngSeed);
-  let s: GameState = { ...prev, tick: prev.tick + 1 };
+  let s: GameState = {
+    ...prev,
+    tick: prev.tick + 1,
+    energy: Math.min(BRIGADE_ENERGY_MAX, prev.energy + BRIGADE_ENERGY_REGEN),
+  };
 
   s = updateHappiness(s);
   s = collectRent(s);

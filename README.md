@@ -34,6 +34,14 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
 
 - Occupied flats pay rent (Kčs) every second; happiness scales the income
   (never below a 0.2× trickle — you can always dig yourself out).
+- Impatient comrades can click **Akce Z** ("voluntary" community work): each
+  click earns a few Kčs and costs elán, which regenerates over time. It gives
+  the first minutes an active lane while rent compounds.
+- Milestones pay a cash bonus from OPBH, and a fresh house fills with tenants
+  faster (the waiting list is long) — the early game moves.
+- A how-to overlay opens on a new game; the **?** button in the header brings
+  it back. The side panel keeps a short house chronicle (kronika) of recent
+  events.
 - Tenants move in on their own, each with an archetype and a quirk: the
   pensioner never leaves but drags down the floor's mood, the vekslák pays
   1.5× but attracts the StB, pan Lojza throws parties.

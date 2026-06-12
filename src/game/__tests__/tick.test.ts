@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { tick } from '../tick';
 import { resolveSchuze } from '../events';
-import { rentPerSec } from '../economy';
+import {
+  BRIGADE_ENERGY_COST,
+  BRIGADE_ENERGY_MAX,
+  brigadeReward,
+  MILESTONE_REWARDS,
+  rentPerSec,
+} from '../economy';
 import { ARCHETYPES } from '../tenants';
+import { applyBrigadeWork, migrateSave, SAVE_VERSION } from '../state';
 import type { GameState } from '../types';
 import { deepFreeze, freshState, withFloors, withTenant } from './helpers';
 
@@ -123,12 +130,54 @@ describe('determinism & purity', () => {
   });
 });
 
+describe('Akce Z (brigade work)', () => {
+  it('earns money and drains elán', () => {
+    const s = freshState();
+    const next = applyBrigadeWork(s);
+    expect(next.money).toBe(s.money + brigadeReward(1));
+    expect(next.energy).toBe(s.energy - BRIGADE_ENERGY_COST);
+    expect(next.totalEarned).toBe(s.totalEarned + brigadeReward(1));
+  });
+
+  it('does nothing when out of elán', () => {
+    const s = { ...freshState(), energy: BRIGADE_ENERGY_COST - 1 };
+    expect(applyBrigadeWork(s)).toBe(s);
+  });
+
+  it('elán regenerates each tick up to the cap', () => {
+    const tired = { ...freshState(), energy: 0 };
+    expect(tick(tired).energy).toBeGreaterThan(0);
+    const rested = freshState();
+    expect(tick(rested).energy).toBe(BRIGADE_ENERGY_MAX);
+  });
+
+  it('reward scales with building size', () => {
+    expect(brigadeReward(8)).toBeGreaterThan(brigadeReward(1));
+  });
+});
+
+describe('save migration', () => {
+  it('fills the v2 energy field into a v1 save', () => {
+    const v1: Partial<GameState> = { ...freshState(), version: 1 };
+    delete v1.energy;
+    const migrated = migrateSave(v1 as GameState, 1);
+    expect(migrated.energy).toBe(BRIGADE_ENERGY_MAX);
+    expect(migrated.version).toBe(SAVE_VERSION);
+  });
+
+  it('leaves a current save untouched', () => {
+    const s = freshState();
+    expect(migrateSave(s, SAVE_VERSION)).toBe(s);
+  });
+});
+
 describe('milestones', () => {
-  it('fires first1000 when total earnings cross 1 000 Kčs', () => {
+  it('fires first1000 when total earnings cross 1 000 Kčs and pays the OPBH reward', () => {
     const s = { ...freshState(), totalEarned: 999.9 };
     const next = tick(s);
     expect(next.milestones.first1000).toBe(true);
     expect(next.log.some((e) => e.kind === 'milestone')).toBe(true);
+    expect(next.money).toBeGreaterThanOrEqual(s.money + MILESTONE_REWARDS.first1000);
   });
 
   it('fires firstFullFloor when a floor fills up', () => {

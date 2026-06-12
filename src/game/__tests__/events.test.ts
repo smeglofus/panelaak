@@ -140,6 +140,35 @@ describe('domovní schůze', () => {
   });
 });
 
+describe('melouch', () => {
+  it('requires a leak and then fixes one for free', () => {
+    expect(eligibleEvents(freshState()).map((e) => e.id)).not.toContain('melouch');
+
+    let s = freshState();
+    const b = s.buildings[0];
+    s = {
+      ...s,
+      buildings: [
+        { ...b, flats: b.flats.map((f) => (f.index === 0 ? { ...f, problem: 'leak' as const } : f)) },
+      ],
+    };
+    expect(eligibleEvents(s).map((e) => e.id)).toContain('melouch');
+    const next = def('melouch').apply(s, createRng(1));
+    expect(next.buildings[0].flats[0].problem).toBeNull();
+    expect(next.money).toBe(s.money); // free, that's the point
+  });
+});
+
+describe('jitrnice', () => {
+  it('needs the crane operator and lifts the whole house', () => {
+    const s = freshState(); // Marta (shift) lives in flat 0 from the start
+    expect(eligibleEvents(s).map((e) => e.id)).toContain('jitrnice');
+    const before = s.buildings[0].flats[0].tenant!.happiness;
+    const next = def('jitrnice').apply(s, createRng(1));
+    expect(next.buildings[0].flats[0].tenant!.happiness).toBeGreaterThan(before);
+  });
+});
+
 describe('timed events expire', () => {
   it('hot water comes back and logs it', () => {
     let s = { ...freshState(), tick: 10, activeEvents: [{ id: 'hotWater', remaining: 1 }] };

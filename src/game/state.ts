@@ -11,12 +11,15 @@ import type {
 import { createRng } from './rng';
 import { createTenant } from './tenants';
 import {
+  BRIGADE_ENERGY_COST,
+  BRIGADE_ENERGY_MAX,
+  brigadeReward,
   STARTING_MONEY,
   STARTING_REPUTATION,
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 const LOG_CAP = 50;
 
@@ -42,6 +45,7 @@ export function createInitialState(seed?: number): GameState {
     money: STARTING_MONEY,
     totalEarned: 0,
     reputation: STARTING_REPUTATION,
+    energy: BRIGADE_ENERGY_MAX,
     buildings: [building],
     meta: { prestigeLevel: 0 },
     upgrades: { elevatorNdr: false, cellar: false, satellite: false, laundry: false },
@@ -117,4 +121,29 @@ export function updateFlat(
 
 export function vacateFlat(s: GameState, index: number): GameState {
   return updateFlat(s, index, (f) => ({ ...f, tenant: null }));
+}
+
+/**
+ * Akce Z: one unit of voluntary-mandatory work. Spends elán, earns a few Kčs.
+ * Returns the state unchanged when the comrade is out of energy.
+ */
+export function applyBrigadeWork(s: GameState): GameState {
+  if (s.energy < BRIGADE_ENERGY_COST) return s;
+  const reward = brigadeReward(mainBuilding(s).floors);
+  return {
+    ...s,
+    energy: s.energy - BRIGADE_ENERGY_COST,
+    money: s.money + reward,
+    totalEarned: s.totalEarned + reward,
+  };
+}
+
+/** Bring an older persisted save up to the current schema. */
+export function migrateSave(game: GameState, fromVersion: number): GameState {
+  let g = game;
+  if (fromVersion < 2) {
+    // v2 added the Akce Z energy pool.
+    g = { ...g, version: 2, energy: BRIGADE_ENERGY_MAX };
+  }
+  return g;
 }

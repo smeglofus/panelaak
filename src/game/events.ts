@@ -13,6 +13,7 @@ import {
   isEventActive,
   mainBuilding,
   mapTenants,
+  updateFlat,
   vacateFlat,
 } from './state';
 import { pickWeighted } from './tenants';
@@ -21,6 +22,7 @@ import {
   EVENT_CHANCE,
   EVENT_GRACE_SECONDS,
   formatKcs,
+  JITRNICE_HAPPINESS_BONUS,
   KSC_FINE_MAX,
   KSC_FINE_MIN,
   KSC_FINE_RATE,
@@ -139,6 +141,29 @@ export const EVENTS: readonly GameEventDef[] = [
         ],
       },
     }),
+  },
+  {
+    id: 'melouch',
+    weight: 10,
+    condition: (s) => mainBuilding(s).flats.some((f) => f.problem === 'leak'),
+    apply: (s, rng) => {
+      const leaky = mainBuilding(s).flats.filter((f) => f.problem === 'leak');
+      const target = rng.pick(leaky);
+      const next = updateFlat(s, target.index, (f) => ({ ...f, problem: null }));
+      return addLog(next, 'good', CS.events.melouch(CS.ui.flatLabel(target.index + 1)));
+    },
+  },
+  {
+    id: 'jitrnice',
+    weight: 10,
+    condition: (s) => hasArchetype(s, 'shift'),
+    apply: (s) => {
+      const next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + JITRNICE_HAPPINESS_BONUS, 0, 100),
+      }));
+      return addLog(next, 'good', CS.events.jitrnice);
+    },
   },
   {
     id: 'satelliteReported',

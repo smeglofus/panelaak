@@ -8,7 +8,15 @@ import type { GameState, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveSchuze } from './events';
 import { computeOffline, type OfflineSummary } from './offline';
-import { addLog, createFlat, createInitialState, mainBuilding, SAVE_VERSION } from './state';
+import {
+  addLog,
+  applyBrigadeWork,
+  createFlat,
+  createInitialState,
+  mainBuilding,
+  migrateSave,
+  SAVE_VERSION,
+} from './state';
 import {
   elevatorRepairCost,
   FLATS_PER_FLOOR,
@@ -22,8 +30,12 @@ import { CS } from './content.cs';
 interface PanelakStore {
   game: GameState;
   offlineSummary: OfflineSummary | null;
+  /** Transient — the help overlay also pauses the tick loop. */
+  helpOpen: boolean;
 
   tickOnce: () => void;
+  workBrigade: () => void;
+  setHelpOpen: (open: boolean) => void;
   buyFloor: () => void;
   buyUpgrade: (id: UpgradeId) => void;
   repairElevator: () => void;
@@ -39,17 +51,26 @@ export const useGame = create<PanelakStore>()(
     (set, get) => ({
       game: createInitialState(),
       offlineSummary: null,
+      helpOpen: false,
 
       tickOnce: () => {
-        const { game, offlineSummary } = get();
+        const { game, offlineSummary, helpOpen } = get();
         // Modals pause the simulation; keep the save timestamp fresh so a
         // reload during a pause doesn't double-pay offline earnings.
-        if (offlineSummary || game.pendingChoice) {
+        if (offlineSummary || helpOpen || game.pendingChoice) {
           set({ game: { ...game, lastSaved: Date.now() } });
           return;
         }
         set({ game: { ...tick(game), lastSaved: Date.now() } });
       },
+
+      workBrigade: () => {
+        const { game, offlineSummary, helpOpen } = get();
+        if (offlineSummary || helpOpen || game.pendingChoice) return;
+        set({ game: applyBrigadeWork(game) });
+      },
+
+      setHelpOpen: (open) => set({ helpOpen: open }),
 
       buyFloor: () => {
         const { game } = get();
@@ -151,7 +172,10 @@ export const useGame = create<PanelakStore>()(
       name: 'panelak-tycoon-save',
       version: SAVE_VERSION,
       partialize: (s) => ({ game: s.game }),
-      migrate: (persisted) => persisted as { game: GameState },
+      migrate: (persisted, version) => {
+        const p = persisted as { game: GameState };
+        return { game: migrateSave(p.game, version) };
+      },
       onRehydrateStorage: () => (state) => {
         // Defer until the store is fully constructed, then settle offline rent.
         if (state) queueMicrotask(() => useGame.getState().applyOfflineProgress());

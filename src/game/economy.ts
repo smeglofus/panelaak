@@ -2,7 +2,7 @@
 // Numbers target: first upgrade ~30 s, first new floor ~2-3 min, full 8-floor
 // building in ~2-3 hours of mixed active/idle play (spec §5).
 
-import type { Building, GameState, Tenant, UpgradeId } from './types';
+import type { Building, GameState, MilestoneId, Tenant, UpgradeId } from './types';
 import { ARCHETYPES } from './tenants';
 
 // --- Building ---------------------------------------------------------------
@@ -77,9 +77,27 @@ export function moveInChance(reputation: number): number {
 export const MOVE_OUT_HAPPINESS_THRESHOLD = 20;
 export const MOVE_OUT_GRACE_SECONDS = 60;
 
+/**
+ * The waiting list (pořadník) is long — while the house is nearly empty,
+ * flats fill faster. Keeps the first minutes of a fresh game lively.
+ */
+export const EARLY_MOVE_IN_BOOST = 2;
+export const EARLY_MOVE_IN_MAX_OCCUPIED = 4;
+
 export const REP_MOVE_IN = 1;
 export const REP_MOVE_OUT = -5;
 export const REP_MILESTONE = 3;
+
+// --- Akce Z (active work for impatient comrades) -----------------------------
+
+export const BRIGADE_ENERGY_MAX = 100;
+export const BRIGADE_ENERGY_COST = 10;
+/** Per second → a sustained click every 2.5 s, or a burst of 10 from full elán. */
+export const BRIGADE_ENERGY_REGEN = 4;
+
+export function brigadeReward(floors: number): number {
+  return 3 + floors;
+}
 
 // --- Breakdowns -------------------------------------------------------------
 
@@ -118,6 +136,8 @@ export const MEJDAN_HAPPINESS_HIT = 25;
 export const BANANAS_HAPPINESS_BONUS = 15;
 export const REP_BANANAS = 2;
 
+export const JITRNICE_HAPPINESS_BONUS = 10;
+
 export const SCHUZE_COST = 50;
 export const SCHUZE_PAY_BONUS = 12;
 export const SCHUZE_SKIP_PENALTY = 6;
@@ -138,6 +158,15 @@ export const CELLAR_RENT_MULT = 1.1;
 // --- Milestones -------------------------------------------------------------
 
 export const VZORNY_DUM_HAPPINESS = 80;
+
+/** Cash bonus from OPBH for each milestone — early goals pay for themselves. */
+export const MILESTONE_REWARDS: Record<MilestoneId, number> = {
+  firstFullFloor: 100,
+  first1000: 150,
+  elevatorInstalled: 250,
+  eightFloors: 500,
+  vzornyDum: 1000,
+};
 
 // --- Display helpers (Czech number formatting) -------------------------------
 

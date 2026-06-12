@@ -6,6 +6,8 @@ import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { avgHappiness, occupiedCount } from '../game/state';
 import {
+  BRIGADE_ENERGY_COST,
+  brigadeReward,
   elevatorRepairCost,
   formatKcs,
   formatKcsPerSec,
@@ -19,6 +21,7 @@ export default function SidePanel() {
   const buyUpgrade = useGame((s) => s.buyUpgrade);
   const repairElevator = useGame((s) => s.repairElevator);
   const repairLeak = useGame((s) => s.repairLeak);
+  const workBrigade = useGame((s) => s.workBrigade);
   const newGame = useGame((s) => s.newGame);
 
   const b = game.buildings[0];
@@ -48,6 +51,26 @@ export default function SidePanel() {
           <span className="stat-value">{CS.ui.flatsCount(occupiedCount(game), b.flats.length)}</span>
         </div>
       </div>
+
+      <section className="panel-section">
+        <h3>{CS.ui.brigade}</h3>
+        <button
+          type="button"
+          className="btn btn-brigade"
+          disabled={game.energy < BRIGADE_ENERGY_COST}
+          onClick={workBrigade}
+        >
+          🔨 {CS.ui.brigadeAction} · +{formatKcs(brigadeReward(b.floors))}
+        </button>
+        <div className="energy-row">
+          <span className="energy-label">{CS.ui.energy}</span>
+          <div className="bar">
+            <div className="bar-fill bar-energy" style={{ width: `${game.energy}%` }} />
+          </div>
+          <span className="energy-value">{Math.round(game.energy)} %</span>
+        </div>
+        <p className="brigade-hint">{CS.ui.brigadeHint}</p>
+      </section>
 
       {(b.elevatorBroken || leaks.length > 0) && (
         <section className="panel-section panel-alert">
@@ -113,6 +136,24 @@ export default function SidePanel() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="panel-section">
+        <h3>{CS.ui.kronika}</h3>
+        {game.log.length === 0 ? (
+          <p className="kronika-empty">{CS.ui.kronikaEmpty}</p>
+        ) : (
+          <ul className="kronika">
+            {game.log
+              .slice(-6)
+              .reverse()
+              .map((e) => (
+                <li key={e.seq} className={`kronika-${e.kind}`}>
+                  {e.text}
+                </li>
+              ))}
+          </ul>
+        )}
       </section>
 
       <button

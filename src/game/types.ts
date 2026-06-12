@@ -85,6 +85,8 @@ export interface GameState {
   totalEarned: number;
   /** 0..100, scales tenant move-in chance. */
   reputation: number;
+  /** Elán 0..100 — spent by the Akce Z work action, regenerates over time. */
+  energy: number;
   /** Always length 1 in MVP; an array so a sídliště view doesn't need a schema rewrite. */
   buildings: Building[];
   meta: { prestigeLevel: number };
