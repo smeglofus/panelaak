@@ -106,5 +106,6 @@ export function createTenant(
     unhappySince: null,
     movedInAt: tick,
     quirkDone: false,
+    evictionAt: null,
   };
 }

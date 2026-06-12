@@ -2,7 +2,7 @@
 // generic weighted pick over eligible definitions — weights and conditions are
 // data here, not branches in tick().
 
-import type { GameState } from './types';
+import type { GameState, PendingChoice } from './types';
 import type { Rng } from './rng';
 import { CS } from './content.cs';
 import {
@@ -22,6 +22,10 @@ import {
   AZOR_SEARCH_COST,
   AZOR_SKIP_PENSIONER_HIT,
   BANANAS_HAPPINESS_BONUS,
+  MAJ_DECORATION_COST,
+  REP_MAJ_DECORATED,
+  REP_MAJ_SKIPPED,
+  TETA_BONY,
   EVENT_CHANCE,
   EVENT_GRACE_SECONDS,
   formatKcs,
@@ -299,7 +303,133 @@ export const EVENTS: readonly GameEventDef[] = [
       },
     }),
   },
+  {
+    id: 'teta',
+    weight: 6,
+    apply: (s) => {
+      const next = { ...s, bony: s.bony + TETA_BONY };
+      return addLog(next, 'good', CS.events.teta);
+    },
+  },
+  {
+    id: 'prosba',
+    weight: 12,
+    condition: (s) =>
+      s.pendingChoice === null && mainBuilding(s).flats.some((f) => f.tenant),
+    apply: (s, rng) => {
+      const occupied = mainBuilding(s).flats.filter((f) => f.tenant);
+      const flat = rng.pick(occupied);
+      const requestId = REQUEST_BY_ARCHETYPE[flat.tenant!.archetype] ?? 'zarovka';
+      const def = REQUEST_DEFS[requestId];
+      const texts = CS.requests[requestId];
+      return {
+        ...s,
+        pendingChoice: {
+          eventId: 'prosba',
+          flatIndex: flat.index,
+          requestId,
+          title: CS.events.prosbaTitle,
+          body: texts.body(flat.tenant!.name),
+          options: [
+            { id: 'allow', label: texts.allow, disabled: s.money < def.cost },
+            { id: 'refuse', label: texts.refuse },
+          ],
+        },
+      };
+    },
+  },
 ];
+
+// --- Tenant requests (prosby) -------------------------------------------------
+
+type RequestId = keyof typeof CS.requests;
+
+interface RequestDef {
+  cost: number;
+  onAllow: (s: GameState, flatIndex: number) => GameState;
+  onRefuse: (s: GameState, flatIndex: number) => GameState;
+}
+
+const bumpTenant = (s: GameState, flatIndex: number, delta: number): GameState =>
+  mapTenants(s, (t, f) =>
+    f.index === flatIndex ? { ...t, happiness: clamp(t.happiness + delta, 0, 100) } : t,
+  );
+
+const bumpFloorOthers = (s: GameState, flatIndex: number, delta: number): GameState => {
+  const floor = mainBuilding(s).flats.find((f) => f.index === flatIndex)!.floor;
+  return mapTenants(s, (t, f) =>
+    f.floor === floor && f.index !== flatIndex
+      ? { ...t, happiness: clamp(t.happiness + delta, 0, 100) }
+      : t,
+  );
+};
+
+const bumpArchetype = (s: GameState, archetype: string, delta: number): GameState =>
+  mapTenants(s, (t) =>
+    t.archetype === archetype
+      ? { ...t, happiness: clamp(t.happiness + delta, 0, 100) }
+      : t,
+  );
+
+export const REQUEST_DEFS: Record<RequestId, RequestDef> = {
+  pes: {
+    cost: 0,
+    onAllow: (s, i) => bumpFloorOthers(bumpTenant(s, i, 15), i, -5),
+    onRefuse: (s, i) => bumpTenant(s, i, -10),
+  },
+  odklad: {
+    cost: 20,
+    onAllow: (s, i) => bumpTenant({ ...s, money: s.money - 20 }, i, 12),
+    onRefuse: (s, i) => bumpTenant(s, i, -12),
+  },
+  zabradli: {
+    cost: 25,
+    onAllow: (s) => bumpArchetype({ ...s, money: s.money - 25 }, 'pensioner', 10),
+    onRefuse: (s) => bumpArchetype(s, 'pensioner', -8),
+  },
+  nedele: {
+    cost: 0,
+    onAllow: (s, i) => bumpFloorOthers(bumpTenant(s, i, 15), i, -8),
+    onRefuse: (s, i) => bumpTenant(s, i, -10),
+  },
+  zarovka: {
+    cost: 10,
+    onAllow: (s) =>
+      mapTenants({ ...s, money: s.money - 10 }, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + 4, 0, 100),
+      })),
+    onRefuse: (s, i) => bumpTenant(s, i, -6),
+  },
+};
+
+const REQUEST_BY_ARCHETYPE: Partial<Record<string, RequestId>> = {
+  family: 'pes',
+  couple: 'pes',
+  drunk: 'odklad',
+  pensioner: 'zabradli',
+  kutil: 'nedele',
+};
+
+/** 1. máj: the entrance decoration is expected. Triggered from the calendar. */
+export function majChoice(s: GameState): GameState {
+  return {
+    ...s,
+    pendingChoice: {
+      eventId: 'prvnimaj',
+      title: CS.events.majTitle,
+      body: CS.events.majBody,
+      options: [
+        {
+          id: 'decorate',
+          label: CS.events.majDecorate(formatKcs(MAJ_DECORATION_COST)),
+          disabled: s.money < MAJ_DECORATION_COST,
+        },
+        { id: 'skip', label: CS.events.majSkip },
+      ],
+    },
+  };
+}
 
 export function eligibleEvents(s: GameState): GameEventDef[] {
   return EVENTS.filter(
@@ -339,8 +469,12 @@ export function processEvents(s: GameState, rng: Rng): GameState {
 
 // --- Interactive event resolution --------------------------------------------
 // Each choice event has a resolver; the store dispatches by pendingChoice id.
+// The resolver also receives the original choice for its context fields.
 
-const CHOICE_RESOLVERS: Record<string, (s: GameState, optionId: string) => GameState> = {
+const CHOICE_RESOLVERS: Record<
+  string,
+  (s: GameState, optionId: string, choice: PendingChoice) => GameState
+> = {
   schuze: (s, optionId) => {
     if (optionId === 'pay' && s.money >= SCHUZE_COST) {
       s = { ...s, money: s.money - SCHUZE_COST };
@@ -374,12 +508,40 @@ const CHOICE_RESOLVERS: Record<string, (s: GameState, optionId: string) => GameS
     s = { ...s, reputation: clamp(s.reputation + REP_AZOR_SKIP, 0, 100) };
     return addLog(s, 'info', CS.events.azorReturned);
   },
+
+  prvnimaj: (s, optionId) => {
+    if (optionId === 'decorate' && s.money >= MAJ_DECORATION_COST) {
+      s = {
+        ...s,
+        money: s.money - MAJ_DECORATION_COST,
+        reputation: clamp(s.reputation + REP_MAJ_DECORATED, 0, 100),
+      };
+      return addLog(s, 'good', CS.events.majDecorated);
+    }
+    s = { ...s, reputation: clamp(s.reputation + REP_MAJ_SKIPPED, 0, 100) };
+    return addLog(s, 'bad', CS.events.majSkipped);
+  },
+
+  prosba: (s, optionId, choice) => {
+    const requestId = choice.requestId as RequestId | undefined;
+    const flatIndex = choice.flatIndex;
+    if (!requestId || flatIndex === undefined) return s;
+    const def = REQUEST_DEFS[requestId];
+    const texts = CS.requests[requestId];
+    if (optionId === 'allow' && s.money >= def.cost) {
+      s = def.onAllow(s, flatIndex);
+      return addLog(s, 'good', texts.allowed);
+    }
+    s = def.onRefuse(s, flatIndex);
+    return addLog(s, 'info', texts.refused);
+  },
 };
 
 /** Resolve the open choice modal; unknown ids just close the modal. */
 export function resolveChoice(s: GameState, optionId: string): GameState {
   if (!s.pendingChoice) return s;
-  const resolver = CHOICE_RESOLVERS[s.pendingChoice.eventId];
+  const choice = s.pendingChoice;
+  const resolver = CHOICE_RESOLVERS[choice.eventId];
   s = { ...s, pendingChoice: null };
-  return resolver ? resolver(s, optionId) : s;
+  return resolver ? resolver(s, optionId, choice) : s;
 }

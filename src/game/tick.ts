@@ -7,6 +7,7 @@ import { createRng, type Rng } from './rng';
 import { CS } from './content.cs';
 import { createTenant } from './tenants';
 import { processEvents } from './events';
+import { dateFromTick, dateJustReached, isSummer, isWinter } from './calendar';
 import {
   addLog,
   avgHappiness,
@@ -23,6 +24,7 @@ import {
   CARETAKER_FIX_CHANCE,
   CARETAKER_WAGE_PER_SEC,
   COUPLE_ELEVATOR_EXTRA_PENALTY,
+  DIGITALKY_FIX_MULT,
   DISIDENT_LOYALTY_REP,
   DISIDENT_LOYALTY_SECONDS,
   EARLY_MOVE_IN_BOOST,
@@ -38,32 +40,43 @@ import {
   formatKcs,
   HAPPINESS_BASE_TARGET,
   HAPPINESS_DRIFT_RATE,
+  HEATING_COST_PER_FLOOR,
   HOT_WATER_TARGET_PENALTY,
   incomePerSec,
   KUTIL_FIX_CHANCE,
   LAUNDRY_REGEN_MULT,
+  LAUNDRY_REGEN_MULT_WEST,
   LAVICKY_PENSIONER_BONUS,
   LEAK_CHANCE,
   MAX_FLOORS,
+  MILESTONE_BONY,
   MILESTONE_REWARDS,
   MOVE_OUT_GRACE_SECONDS,
   MOVE_OUT_HAPPINESS_THRESHOLD,
   moveInChance,
   MUSICIAN_MOVE_IN_REP,
   MUSICIAN_NEIGHBOR_DRAG,
+  ODSTAVKA_DURATION,
   PENSIONER_NEIGHBOR_DRAG,
   PISKOVISTE_FAMILY_BONUS,
   PROBLEM_DEFS,
+  RADIATOR_CHANCE,
   REP_MILESTONE,
   REP_MOVE_IN,
   REP_MOVE_OUT,
   SATELLITE_TARGET_BONUS,
+  SUMMER_TARGET_BONUS,
   SUSAK_TARGET_BONUS,
   SVAZAK_NEIGHBOR_DRAG,
   TENANT_STARTING_HAPPINESS,
+  TV_TARGET_BONUS,
+  VANOCE_HAPPINESS_BONUS,
+  VEKSLAK_BON_CHANCE,
   VZORNY_DUM_HAPPINESS,
+  WINTER_TARGET_PENALTY,
   ZAHONKY_TARGET_BONUS,
 } from './economy';
+import { majChoice } from './events';
 
 export interface HappinessFactor {
   label: string;
@@ -89,7 +102,12 @@ export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
   const factors: HappinessFactor[] = [];
   const F = CS.factors;
 
+  const date = dateFromTick(s.tick);
+  if (isWinter(date)) factors.push({ label: F.winter, delta: -WINTER_TARGET_PENALTY });
+  if (isSummer(date)) factors.push({ label: F.summer, delta: SUMMER_TARGET_BONUS });
+
   if (s.upgrades.satellite) factors.push({ label: F.satellite, delta: SATELLITE_TARGET_BONUS });
+  if (s.tuzex.tv) factors.push({ label: F.tv, delta: TV_TARGET_BONUS });
   if (s.courtyard.zahonky) factors.push({ label: F.zahonky, delta: ZAHONKY_TARGET_BONUS });
   if (s.courtyard.susak) factors.push({ label: F.susak, delta: SUSAK_TARGET_BONUS });
   if (s.courtyard.piskoviste && t?.archetype === 'family') {
@@ -141,7 +159,9 @@ function updateHappiness(s: GameState): GameState {
   return mapTenants(s, (t, f) => {
     const target = happinessTarget(s, f);
     let rate = HAPPINESS_DRIFT_RATE;
-    if (target > t.happiness && s.upgrades.laundry) rate *= LAUNDRY_REGEN_MULT;
+    if (target > t.happiness && s.upgrades.laundry) {
+      rate *= s.tuzex.pracka ? LAUNDRY_REGEN_MULT_WEST : LAUNDRY_REGEN_MULT;
+    }
     if (target < t.happiness && b.elevatorBroken && f.floor >= ELEVATOR_MIN_FLOORS) {
       rate *= ELEVATOR_DECAY_MULT;
     }
@@ -276,11 +296,12 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
   if (!s.caretakerHired) return s;
 
   s = { ...s, money: Math.max(0, s.money - CARETAKER_WAGE_PER_SEC) };
+  const fixChance = CARETAKER_FIX_CHANCE * (s.tuzex.digitalky ? DIGITALKY_FIX_MULT : 1);
 
   const b = mainBuilding(s);
   if (b.elevatorBroken) {
     const cost = elevatorRepairCost(b.floors);
-    if (s.money >= cost && rng.chance(CARETAKER_FIX_CHANCE)) {
+    if (s.money >= cost && rng.chance(fixChance)) {
       s = {
         ...s,
         money: s.money - cost,
@@ -293,15 +314,84 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
   for (const flat of mainBuilding(s).flats) {
     if (!flat.problem) continue;
     const cost = PROBLEM_DEFS[flat.problem].repairCost;
-    if (s.money < cost || !rng.chance(CARETAKER_FIX_CHANCE)) continue;
-    const label = CS.ui.flatLabel(flat.index + 1);
-    const text =
-      flat.problem === 'leak'
-        ? CS.toasts.caretakerLeak(label, formatKcs(cost))
-        : CS.toasts.caretakerWindow(label, formatKcs(cost));
+    if (s.money < cost || !rng.chance(fixChance)) continue;
+    const text = CS.problems[flat.problem].caretakerFixed(
+      CS.ui.flatLabel(flat.index + 1),
+      formatKcs(cost),
+    );
     s = { ...s, money: s.money - cost };
     s = updateFlat(s, flat.index, (f) => ({ ...f, problem: null }));
     s = addLog(s, 'good', text);
+  }
+
+  return s;
+}
+
+/** Filed evictions complete after the řízení runs its course. */
+function processEvictions(s: GameState): GameState {
+  for (const flat of mainBuilding(s).flats) {
+    const t = flat.tenant;
+    if (t?.evictionAt != null && s.tick >= t.evictionAt) {
+      s = updateFlat(s, flat.index, (f) => ({ ...f, tenant: null }));
+      s = { ...s, stats: { ...s.stats, moveOuts: s.stats.moveOuts + 1 } };
+      s = addLog(s, 'info', CS.toasts.evictionDone(t.name, CS.ui.flatLabel(flat.index + 1)));
+    }
+  }
+  return s;
+}
+
+/** Vekslák leaves the occasional envelope. Don't ask. */
+function processBony(s: GameState, rng: Rng): GameState {
+  const vekslaks = mainBuilding(s).flats.filter((f) => f.tenant?.archetype === 'vekslak').length;
+  for (let i = 0; i < vekslaks; i++) {
+    if (rng.chance(VEKSLAK_BON_CHANCE)) {
+      s = { ...s, bony: s.bony + 1 };
+      s = addLog(s, 'good', CS.toasts.bonReceived);
+    }
+  }
+  return s;
+}
+
+/** Heating season, radiator failures and fixed dates: odstávka, Vánoce, 1. máj. */
+function processCalendar(s: GameState, rng: Rng): GameState {
+  const date = dateFromTick(s.tick);
+  const b = mainBuilding(s);
+
+  if (isWinter(date)) {
+    s = { ...s, money: Math.max(0, s.money - HEATING_COST_PER_FLOOR * b.floors) };
+
+    if (rng.chance(RADIATOR_CHANCE)) {
+      const candidates = mainBuilding(s).flats.filter((f) => f.tenant && !f.problem);
+      if (candidates.length > 0) {
+        const target = rng.pick(candidates);
+        s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'radiator' as const }));
+        s = { ...s, stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 } };
+        s = addLog(s, 'bad', CS.events.radiator(CS.ui.flatLabel(target.index + 1)));
+      }
+    }
+  }
+
+  // 1. července: the annual planned hot-water outage. Plán je plán.
+  if (dateJustReached(s.tick, 7, 1) && !isEventActive(s, 'hotWater')) {
+    s = {
+      ...s,
+      activeEvents: [...s.activeEvents, { id: 'hotWater', remaining: ODSTAVKA_DURATION }],
+    };
+    s = addLog(s, 'bad', CS.events.odstavka);
+  }
+
+  // 24. prosince: cukroví pro celý dům.
+  if (dateJustReached(s.tick, 12, 24)) {
+    s = mapTenants(s, (t) => ({
+      ...t,
+      happiness: clamp(t.happiness + VANOCE_HAPPINESS_BONUS, 0, 100),
+    }));
+    s = addLog(s, 'good', CS.events.vanoce);
+  }
+
+  // 1. máje: výzdoba vchodu se očekává.
+  if (dateJustReached(s.tick, 5, 1) && s.pendingChoice === null) {
+    s = majChoice(s);
   }
 
   return s;
@@ -339,11 +429,13 @@ function checkMilestones(s: GameState): GameState {
   for (const def of MILESTONE_DEFS) {
     if (!s.milestones[def.id] && def.achieved(s)) {
       const reward = MILESTONE_REWARDS[def.id];
+      const bony = MILESTONE_BONY[def.id];
       s = {
         ...s,
         milestones: { ...s.milestones, [def.id]: true },
         money: s.money + reward,
         totalEarned: s.totalEarned + reward,
+        bony: s.bony + bony,
         reputation: clamp(s.reputation + REP_MILESTONE, 0, 100),
       };
       s = addLog(
@@ -351,6 +443,7 @@ function checkMilestones(s: GameState): GameState {
         'milestone',
         `${CS.milestones[def.id].toast} ${CS.ui.milestoneReward(formatKcs(reward))}`,
       );
+      if (bony > 0) s = addLog(s, 'good', CS.toasts.bonyAwarded(bony));
     }
   }
   return s;
@@ -370,10 +463,13 @@ export function tick(prev: GameState): GameState {
   s = updateHappiness(s);
   s = collectRent(s);
   s = processMoveOuts(s);
+  s = processEvictions(s);
   s = processMoveIns(s, rng);
   s = processBreakdowns(s, rng);
   s = processQuirks(s, rng);
   s = processCaretaker(s, rng);
+  s = processBony(s, rng);
+  s = processCalendar(s, rng);
   s = processEvents(s, rng);
   s = checkMilestones(s);
 

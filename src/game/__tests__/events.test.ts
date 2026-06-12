@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { eligibleEvents, EVENTS, processEvents, resolveChoice } from '../events';
+import { eligibleEvents, EVENTS, majChoice, processEvents, resolveChoice } from '../events';
 import { createRng } from '../rng';
-import { AZOR_SEARCH_COST, SCHUZE_COST } from '../economy';
+import { AZOR_SEARCH_COST, MAJ_DECORATION_COST, SCHUZE_COST } from '../economy';
 import { freshState, withFloors, withTenant } from './helpers';
 
 const def = (id: string) => EVENTS.find((e) => e.id === id)!;
@@ -217,6 +217,40 @@ describe('dvorek events', () => {
     const ignored = resolveChoice(s, 'skip');
     expect(ignored.money).toBe(500);
     expect(ignored.buildings[0].flats[1].tenant!.happiness).toBeLessThan(60);
+  });
+});
+
+describe('prosby nájemníků', () => {
+  it('a pensioner asks for the railing; paying helps all pensioners', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'pensioner', happiness: 60 });
+    s = { ...s, money: 500 };
+    const opened = def('prosba').apply(s, createRng(1));
+    expect(opened.pendingChoice?.eventId).toBe('prosba');
+    expect(opened.pendingChoice?.requestId).toBe('zabradli');
+
+    const allowed = resolveChoice(opened, 'allow');
+    expect(allowed.money).toBe(475);
+    expect(allowed.buildings[0].flats[0].tenant!.happiness).toBe(70);
+
+    const refused = resolveChoice(opened, 'refuse');
+    expect(refused.money).toBe(500);
+    expect(refused.buildings[0].flats[0].tenant!.happiness).toBe(52);
+  });
+});
+
+describe('první máj', () => {
+  it('decorating costs money and earns reputation; skipping is noted', () => {
+    const s = { ...freshState(), money: 500 };
+    const opened = majChoice(s);
+    expect(opened.pendingChoice?.eventId).toBe('prvnimaj');
+
+    const decorated = resolveChoice(opened, 'decorate');
+    expect(decorated.money).toBe(500 - MAJ_DECORATION_COST);
+    expect(decorated.reputation).toBeGreaterThan(s.reputation);
+
+    const skipped = resolveChoice(opened, 'skip');
+    expect(skipped.reputation).toBeLessThan(s.reputation);
   });
 });
 

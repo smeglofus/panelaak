@@ -1,10 +1,11 @@
 // The "domovní správa" notice board: money, stats, contextual repairs,
 // upgrades, milestones, new game.
 
-import type { CourtyardId, MilestoneId, UpgradeId } from '../game/types';
+import type { CourtyardId, MilestoneId, TuzexId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { avgHappiness, occupiedCount } from '../game/state';
+import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
@@ -14,8 +15,11 @@ import {
   elevatorRepairCost,
   formatKcs,
   formatKcsPerSec,
+  HEATING_COST_PER_FLOOR,
   incomePerSec,
+  KAVA_COST_BONY,
   PROBLEM_DEFS,
+  TUZEX_COSTS,
   UPGRADE_COSTS,
 } from '../game/economy';
 
@@ -26,6 +30,8 @@ export default function SidePanel() {
   const repairProblem = useGame((s) => s.repairProblem);
   const workBrigade = useGame((s) => s.workBrigade);
   const buyCourtyard = useGame((s) => s.buyCourtyard);
+  const buyTuzex = useGame((s) => s.buyTuzex);
+  const buyKava = useGame((s) => s.buyKava);
   const hireCaretaker = useGame((s) => s.hireCaretaker);
   const fireCaretaker = useGame((s) => s.fireCaretaker);
   const newGame = useGame((s) => s.newGame);
@@ -34,13 +40,31 @@ export default function SidePanel() {
   const problems = b.flats.filter((f) => f.problem);
   const anythingBroken = b.elevatorBroken || problems.length > 0;
   const elevCost = elevatorRepairCost(b.floors);
+  const date = dateFromTick(game.tick);
+  const winter = isWinter(date);
 
   return (
     <aside className="panel">
       <div className="panel-header">DOMOVNÍ SPRÁVA</div>
 
+      <div className="date-row">
+        <span>
+          {seasonEmoji(date)} {formatDateCs(date)}
+        </span>
+        {winter && (
+          <span className="heating-note">
+            {CS.ui.heating(formatKcsPerSec(HEATING_COST_PER_FLOOR * b.floors))}
+          </span>
+        )}
+      </div>
+
       <div className="money-box">
-        <div className="money">{formatKcs(game.money)}</div>
+        <div>
+          <div className="money">{formatKcs(game.money)}</div>
+          <div className="bony-row" title={CS.ui.tuzexHint}>
+            ★ {CS.ui.bony(game.bony)}
+          </div>
+        </div>
         <div className="income">+{formatKcsPerSec(incomePerSec(game))}</div>
       </div>
 
@@ -182,6 +206,50 @@ export default function SidePanel() {
             </div>
           );
         })}
+      </section>
+
+      <section className="panel-section">
+        <h3>{CS.ui.tuzex}</h3>
+        {(Object.keys(TUZEX_COSTS) as TuzexId[]).map((id) => {
+          const owned = game.tuzex[id];
+          const cost = TUZEX_COSTS[id];
+          const locked = id === 'pracka' && !game.upgrades.laundry;
+          return (
+            <div key={id} className={`upgrade${owned ? ' upgrade-owned' : ''}`}>
+              <div className="upgrade-text">
+                <strong>{CS.tuzex[id].name}</strong>
+                <span>{CS.tuzex[id].desc}</span>
+              </div>
+              {owned ? (
+                <span className="owned-mark">{CS.ui.owned}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-bony"
+                  disabled={game.bony < cost || locked}
+                  onClick={() => buyTuzex(id)}
+                >
+                  ★ {cost}
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <div className="upgrade">
+          <div className="upgrade-text">
+            <strong>{CS.kava.name}</strong>
+            <span>{CS.kava.desc}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-bony"
+            disabled={game.bony < KAVA_COST_BONY}
+            onClick={buyKava}
+          >
+            ★ {KAVA_COST_BONY}
+          </button>
+        </div>
+        <p className="brigade-hint">{CS.ui.tuzexHint}</p>
       </section>
 
       <section className="panel-section">

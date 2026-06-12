@@ -1,7 +1,14 @@
 // ALL Czech strings, names and flavor text live here (spec §3: hardcoded Czech,
 // single content file). Identifiers stay English; the panelák speaks Czech.
 
-import type { ArchetypeId, CourtyardId, MilestoneId, ProblemId, UpgradeId } from './types';
+import type {
+  ArchetypeId,
+  CourtyardId,
+  MilestoneId,
+  ProblemId,
+  TuzexId,
+  UpgradeId,
+} from './types';
 
 export interface ArchetypeContent {
   label: string;
@@ -62,15 +69,45 @@ export const CS = {
     caretakerHint: 'Opravy platí z fondu a řeší je sám. Většinou. Časem.',
     caretakerLocked: 'Domovník dává smysl až od 3 pater.',
     dvorek: 'Dvorek',
-    repairWindow: 'Zasklít okno',
-    windowInFlat: (flat: string) => `⚽ Rozbité okno — ${flat}`,
     influences: 'Co na něj působí',
+    heating: (kcs: string) => `Topná sezóna: −${kcs}`,
+    bony: (n: number) => `${n} bonů`,
+    tuzex: 'Tuzex',
+    tuzexHint: 'Bony nechává vekslák a dávají je i milníky. Neptejte se, odkud jsou.',
+    evict: 'Podat návrh na výpověď',
+    evictionPending: (sec: number) => `Výpovědní řízení běží… (${sec} s)`,
+    evictionRefused: 'Návrh zamítnut. Zkoušeli to už tři předsedové.',
   },
 
   problems: {
-    leak: { repair: 'Opravit trubku', list: (flat: string) => `💧 Prasklá trubka — ${flat}` },
-    window: { repair: 'Zasklít okno', list: (flat: string) => `⚽ Rozbité okno — ${flat}` },
-  } satisfies Record<ProblemId, { repair: string; list: (flat: string) => string }>,
+    leak: {
+      repair: 'Opravit trubku',
+      list: (flat: string) => `💧 Prasklá trubka — ${flat}`,
+      fixed: (flat: string) => `Trubka opravena (${flat}). Tentokrát snad doopravdy.`,
+      caretakerFixed: (flat: string, kcs: string) => `Pan Fanda vyměnil trubku (${flat}, −${kcs}).`,
+    },
+    window: {
+      repair: 'Zasklít okno',
+      list: (flat: string) => `⚽ Rozbité okno — ${flat}`,
+      fixed: (flat: string) => `Okno zaskleno (${flat}). Sklenář si účtoval i cestu.`,
+      caretakerFixed: (flat: string, kcs: string) => `Pan Fanda zasklil okno (${flat}, −${kcs}).`,
+    },
+    radiator: {
+      repair: 'Odvzdušnit radiátor',
+      list: (flat: string) => `🥶 Studený radiátor — ${flat}`,
+      fixed: (flat: string) => `Radiátor zase topí (${flat}). Klíč na odvzdušnění se našel.`,
+      caretakerFixed: (flat: string, kcs: string) =>
+        `Pan Fanda odvzdušnil radiátor (${flat}, −${kcs}).`,
+    },
+  } satisfies Record<
+    ProblemId,
+    {
+      repair: string;
+      list: (flat: string) => string;
+      fixed: (flat: string) => string;
+      caretakerFixed: (flat: string, kcs: string) => string;
+    }
+  >,
 
   courtyard: {
     piskoviste: {
@@ -96,6 +133,10 @@ export const CS = {
   } satisfies Record<CourtyardId, { name: string; desc: string }>,
 
   factors: {
+    winter: 'Topná sezóna',
+    summer: 'Léto na sídlišti',
+    radiator: 'Studený radiátor',
+    tv: 'Barevná televize ve společné anténě',
     satellite: 'Satelit na střeše',
     zahonky: 'Záhonky na dvorku',
     susak: 'Sušák na prádlo',
@@ -121,6 +162,8 @@ export const CS = {
       'Každý nájemník je jiný: vekslák platí 1,5×, ale přitahuje pozornost. Paní Vlasta se neodstěhuje nikdy. Nikdy.',
       'Od tří pater můžete najmout domovníka — opravy pak řeší (a platí z fondu) sám.',
       'Dvorek není jen tráva: pískoviště, lavičky nebo záhonky zvedají náladu a přinášejí události.',
+      'Čas plyne: v zimě se topí (a studí radiátory), 1. července bývá odstávka. Bony od veksláka uplatníte v Tuzexu.',
+      'Nepohodlného nájemníka lze vystěhovat — za peníze, reputaci a 60 vteřin úředního řízení. Paní Vlastu ne.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -229,8 +272,6 @@ export const CS = {
     elevatorBroke: 'Výtah se porouchal. Zase.',
     elevatorFixed: 'Výtah opraven. Drží to izolepou, ale jede.',
     leak: (flat: string) => `V bytě praskla trubka (${flat}). Instalatér má dovolenou.`,
-    leakFixed: (flat: string) => `Trubka opravena (${flat}). Tentokrát snad doopravdy.`,
-    windowFixed: (flat: string) => `Okno zaskleno (${flat}). Sklenář si účtoval i cestu.`,
     musicianMoveIn: 'Do domu se nastěhovala kultura. Reputace stoupá.',
     disidentLoyal:
       'Bydlí tu už půl hodiny a dům mlčí. Sousedé drží spolu. Reputace stoupá.',
@@ -240,11 +281,16 @@ export const CS = {
       'Pan Fanda nastoupil jako domovník. První věc: pověsil si síťovku v kočárkárně.',
     caretakerFired: 'Pan Fanda skončil. Síťovku si vzal s sebou.',
     caretakerElevator: (kcs: string) => `Pan Fanda opravil výtah (−${kcs}).`,
-    caretakerLeak: (flat: string, kcs: string) =>
-      `Pan Fanda vyměnil trubku (${flat}, −${kcs}).`,
-    caretakerWindow: (flat: string, kcs: string) =>
-      `Pan Fanda zasklil okno (${flat}, −${kcs}).`,
     courtyardBuilt: (name: string) => `Na dvorku přibylo: ${name}.`,
+    evictionFiled: (name: string) =>
+      `Podán návrh na výpověď: ${name}. Razítka schnou, sousedé si šeptají.`,
+    evictionDone: (name: string, flat: string) =>
+      `${name} se odstěhoval(a) úředně (${flat}). Spravedlnost po našem.`,
+    bonReceived: 'Ve schránce přistála obálka s bonem. Pan Karel nic neví.',
+    bonyAwarded: (n: number) => `K odměně přibyly ${n} bony. Neoficiálně.`,
+    tuzexBought: (name: string) => `Z Tuzexu dorazilo: ${name}.`,
+    kavaServed:
+      'Káva a čokoláda z Tuzexu kolovaly po domě. Celý dům si připadá na úrovni.',
   },
 
   events: {
@@ -291,6 +337,80 @@ export const CS = {
     azorFound: 'Azor nalezen v kotelně. Spal. Paní Vlasta děkuje celému domu.',
     azorReturned:
       'Azor se vrátil sám. Po dvou dnech. Páchne uhlím a nikdo neví proč.',
+    odstavka:
+      'Plánovaná odstávka teplé vody. Plán je plán. Termín obnovení: bude upřesněn.',
+    vanoce: 'Štědrý den. Mezi patry koluje cukroví a chvíli jsou všichni sousedé.',
+    radiator: (flat: string) => `Radiátor vystydl (${flat}). Topiči dělají, co můžou. Prý.`,
+    majTitle: 'První máj',
+    majBody:
+      'Blíží se průvod. Domovní správa očekává výzdobu vchodu. Očekává ji velmi.',
+    majDecorate: (kcs: string) => `Vyzdobit vchod (${kcs})`,
+    majSkip: 'Nechat nástěnku být',
+    majDecorated: 'Vchod zářil. Mávátka, karafiáty, transparent. Soudruzi spokojeni.',
+    majSkipped: 'Nástěnka zela prázdnotou. Soudruzi si toho všimli. A zapsali si to.',
+    teta: 'Balík od tety z Vídně. Káva, bony a vůně, kterou Jednota nezná.',
+    prosbaTitle: 'Prosba nájemníka',
+  },
+
+  requests: {
+    pes: {
+      body: (name: string) => `${name} prosí o povolení psa. „Bude hodný. Většinou.“`,
+      allow: 'Povolit psa',
+      refuse: 'Zamítnout',
+      allowed: 'Pes povolen. Štěkot se počítá jako život v domě.',
+      refused: 'Pes zamítnut. V bytě je od té doby podezřele ticho.',
+    },
+    odklad: {
+      body: (name: string) =>
+        `${name} prosí o odklad nájmu. „Do výplaty, soudruhu. Čestný pionýrský.“`,
+      allow: 'Povolit odklad (20 Kčs z fondu)',
+      refuse: 'Zamítnout',
+      allowed: 'Odklad povolen. Vděčnost je veliká, dluh také.',
+      refused: 'Odklad zamítnut. U výčepu se o vás mluví.',
+    },
+    zabradli: {
+      body: (name: string) => `${name} prosí o opravu zábradlí. „Já nic, já jen to koleno.“`,
+      allow: 'Opravit zábradlí (25 Kčs)',
+      refuse: 'Odložit na schůzi',
+      allowed: 'Zábradlí drží. Důchodkyně domu vzkazují, že si toho váží.',
+      refused: 'Zábradlí počká. Důchodkyně si to pamatují. Všechno si pamatují.',
+    },
+    nedele: {
+      body: (name: string) =>
+        `${name} prosí o povolení vrtat v neděli. „Jen pár dírek. Maximálně sto.“`,
+      allow: 'Povolit nedělní vrtání',
+      refuse: 'Zamítnout',
+      allowed: 'Vrtání povoleno. Kutil září, patro skřípe zuby.',
+      refused: 'Vrtání zamítnuto. Kutil smutně hladí příklepovku.',
+    },
+    zarovka: {
+      body: (name: string) =>
+        `${name} prosí o výměnu žárovky na chodbě. „Už tři týdny tma jak v pytli.“`,
+      allow: 'Vyměnit žárovku (10 Kčs)',
+      refuse: 'Tma šetří elektřinu',
+      allowed: 'Na chodbě se rozsvítilo. Drobnost, ale dům si všiml.',
+      refused: 'Chodba zůstává temná. Jako vaše pověst u nájemníka.',
+    },
+  },
+
+  tuzex: {
+    tv: {
+      name: 'Barevná televize',
+      desc: 'Do společné antény. Celý dům kouká barevně (+10 spokojenosti všem).',
+    },
+    pracka: {
+      name: 'Západoněmecká pračka',
+      desc: 'Do prádelny. Spokojenost se obnovuje ještě rychleji. Vyžaduje prádelnu.',
+    },
+    digitalky: {
+      name: 'Digitálky pro domovníka',
+      desc: 'Pan Fanda stíhá opravy dvakrát rychleji. Hlavně je rád ukazuje.',
+    },
+  } satisfies Record<TuzexId, { name: string; desc: string }>,
+
+  kava: {
+    name: 'Káva a čokoláda na schůzi',
+    desc: 'Jednorázově +15 spokojenosti všem. Dá se kupovat opakovaně.',
   },
 
   milestones: {

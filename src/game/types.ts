@@ -16,7 +16,10 @@ export type UpgradeId = 'elevatorNdr' | 'cellar' | 'satellite' | 'laundry';
 
 export type CourtyardId = 'piskoviste' | 'lavicky' | 'zahonky' | 'susak' | 'garaz';
 
-export type ProblemId = 'leak' | 'window';
+/** Permanent Tuzex purchases (paid in bony). Káva is a repeatable consumable. */
+export type TuzexId = 'tv' | 'pracka' | 'digitalky';
+
+export type ProblemId = 'leak' | 'window' | 'radiator';
 
 export type MilestoneId =
   | 'firstFullFloor'
@@ -38,6 +41,8 @@ export interface Tenant {
   movedInAt: number;
   /** One-shot quirk already fired (e.g. the disident loyalty bonus). */
   quirkDone: boolean;
+  /** Tick when a filed eviction completes; null when no proceedings run. */
+  evictionAt: number | null;
 }
 
 export interface Flat {
@@ -81,6 +86,9 @@ export interface PendingChoice {
   title: string;
   body: string;
   options: ChoiceOption[];
+  /** Context for resolvers that target a tenant (prosby). */
+  flatIndex?: number;
+  requestId?: string;
 }
 
 export interface GameStats {
@@ -111,6 +119,9 @@ export interface GameState {
   courtyard: Record<CourtyardId, boolean>;
   /** Pan Fanda: auto-repairs paid from the fund, for a wage. */
   caretakerHired: boolean;
+  /** Tuzex vouchers — the rare second currency. */
+  bony: number;
+  tuzex: Record<TuzexId, boolean>;
   activeEvents: ActiveEvent[];
   /** Set while an interactive event (domovní schůze) waits for the player; tick pauses. */
   pendingChoice: PendingChoice | null;

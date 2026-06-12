@@ -21,13 +21,18 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   očesané záhonky, ztracený Azor (interaktivní volba), trabant před vchodem
 - **Diagnostika spokojenosti** — karta nájemníka ukazuje, co mu vadí a co pomáhá
 
-## v0.3 „Rok na sídlišti“
+## v0.3 „Rok na sídlišti“ *(hotovo)*
 
-- Kalendář (1 herní den ≈ minuty): **topná sezóna** (uhlí, zlobivé radiátory),
-  letní **plánovaná odstávka teplé vody**, Vánoce, 1. máj (povinná výzdoba — volba)
-- **Prosby nájemníků** (mini-questy přes choice modal): povolení psa, odklad nájmu…
-- **Bony + Tuzex** — vzácná druhá měna (vekslák, eventy) za unikátní vylepšení
-  (barevná televize, западoněmecká pračka)
+- Kalendář (den = 30 s, rok = 3 h; start 1. dubna 1983): **topná sezóna**
+  (náklady na topení, studené radiátory), letní **plánovaná odstávka teplé
+  vody** (1. července), Vánoce (24. prosince), 1. máj (výzdoba vchodu — volba)
+- **Výpověď nájemníka** — placená (150 Kčs + reputace), řízení trvá 60 s;
+  paní Vlasta je úředně nevystěhovatelná
+- **Prosby nájemníků** (mini-questy): povolení psa, odklad nájmu, zábradlí,
+  nedělní vrtání, žárovka na chodbě
+- **Bony + Tuzex** — vekslák nechává obálky, milníky přidávají; v Tuzexu:
+  barevná televize, západoněmecká pračka, digitálky pro domovníka, káva
+  na schůzi (opakovatelná)
 
 ## v0.4 „Privatizace 1991“ (prestiž)
 

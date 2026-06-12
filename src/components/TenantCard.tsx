@@ -4,7 +4,13 @@
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import { ARCHETYPES } from '../game/tenants';
-import { flatRentPerSec, formatKcs, formatKcsPerSec, PROBLEM_DEFS } from '../game/economy';
+import {
+  EVICTION_COST,
+  flatRentPerSec,
+  formatKcs,
+  formatKcsPerSec,
+  PROBLEM_DEFS,
+} from '../game/economy';
 import { happinessFactors } from '../game/tick';
 import { useGame } from '../game/store';
 
@@ -17,8 +23,10 @@ export default function TenantCard({ flat, onClose }: Props) {
   const game = useGame((s) => s.game);
   const money = game.money;
   const repairProblem = useGame((s) => s.repairProblem);
+  const requestEviction = useGame((s) => s.requestEviction);
   const t = flat.tenant;
   const factors = t ? happinessFactors(game, flat) : [];
+  const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
   return (
@@ -71,8 +79,22 @@ export default function TenantCard({ flat, onClose }: Props) {
               disabled={money < PROBLEM_DEFS[flat.problem].repairCost}
               onClick={() => repairProblem(flat.index)}
             >
-              {flat.problem === 'leak' ? '💧' : '⚽'} {CS.problems[flat.problem].repair} ·{' '}
-              {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
+              {flat.problem === 'leak' ? '💧' : flat.problem === 'window' ? '⚽' : '🥶'}{' '}
+              {CS.problems[flat.problem].repair} · {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
+            </button>
+          )}
+          {evictionRunning ? (
+            <p className="eviction-pending">
+              {CS.ui.evictionPending(Math.max(0, t.evictionAt! - game.tick))}
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="btn-evict"
+              disabled={t.archetype !== 'pensioner' && money < EVICTION_COST}
+              onClick={() => requestEviction(flat.index)}
+            >
+              {CS.ui.evict} · {formatKcs(EVICTION_COST)}
             </button>
           )}
         </>

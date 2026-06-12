@@ -250,18 +250,117 @@ describe('archetype quirks & courtyard', () => {
   });
 });
 
+describe('výpověď (eviction)', () => {
+  it('completes the řízení and vacates the flat', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'drunk', happiness: 80, evictionAt: 100 });
+    s = { ...s, tick: 99 };
+    const next = tick(s);
+    expect(next.stats.moveOuts).toBe(1);
+    expect(next.log.some((e) => e.text.includes('úředně'))).toBe(true);
+  });
+
+  it('does nothing before the deadline', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'drunk', happiness: 80, evictionAt: 500 });
+    s = { ...s, tick: 100 };
+    const next = tick(s);
+    expect(next.buildings[0].flats[0].tenant).not.toBeNull();
+  });
+});
+
+describe('kalendář ve hře', () => {
+  const WINTER_TICK = 240 * 30; // 1. prosince 1983
+
+  it('winter drains heating money', () => {
+    let s = withFloors(freshState(), 2);
+    s = { ...s, tick: WINTER_TICK, money: 100 };
+    const next = tick(s);
+    expect(next.money).toBeLessThan(100);
+  });
+
+  it('no heating outside the season', () => {
+    let s = withFloors(freshState(), 2);
+    s = { ...s, tick: 10, money: 100 }; // duben, pod grace eventů
+    const next = tick(s);
+    expect(next.money).toBe(100);
+  });
+
+  it('winter lowers the happiness target', () => {
+    const s = withTenant(withFloors(freshState(), 1), 0, { happiness: 70 });
+    const summer = { ...s, tick: 90 * 30 };
+    const winter = { ...s, tick: WINTER_TICK };
+    const flat = (st: GameState) => st.buildings[0].flats[0];
+    expect(happinessTarget(winter, flat(winter))).toBeLessThan(
+      happinessTarget(summer, flat(summer)),
+    );
+  });
+
+  it('the planned July outage arrives. Plán je plán.', () => {
+    let s = withTenant(withFloors(freshState(), 1), 0, { happiness: 80 });
+    s = { ...s, tick: 90 * 30 - 1 }; // vteřinu před 1. červencem
+    const next = tick(s);
+    expect(next.activeEvents.some((e) => e.id === 'hotWater')).toBe(true);
+    expect(next.log.some((e) => e.text.includes('Plánovaná odstávka'))).toBe(true);
+  });
+
+  it('Christmas sweetens the whole house', () => {
+    let s = withTenant(withFloors(freshState(), 1), 0, { happiness: 50 });
+    s = { ...s, tick: 263 * 30 - 1 }; // vteřinu před Štědrým dnem
+    const next = tick(s);
+    expect(next.buildings[0].flats[0].tenant!.happiness).toBeGreaterThan(60);
+    expect(next.log.some((e) => e.text.includes('Štědrý den'))).toBe(true);
+  });
+
+  it('1. máj opens the decoration choice', () => {
+    let s = withTenant(withFloors(freshState(), 1), 0, { happiness: 80 });
+    s = { ...s, tick: 30 * 30 - 1 }; // vteřinu před 1. májem
+    const next = tick(s);
+    expect(next.pendingChoice?.eventId).toBe('prvnimaj');
+  });
+});
+
+describe('bony & Tuzex', () => {
+  it('vekslák leaves envelopes over time', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'vekslak', happiness: 90 });
+    const after = runTicks(s, 1200);
+    expect(after.bony).toBeGreaterThanOrEqual(1);
+  });
+
+  it('color TV raises the happiness target for everyone', () => {
+    const s = withTenant(withFloors(freshState(), 1), 0, { happiness: 70 });
+    const withTv = { ...s, tuzex: { ...s.tuzex, tv: true } };
+    const flat = s.buildings[0].flats[0];
+    expect(happinessTarget(withTv, flat)).toBeGreaterThan(happinessTarget(s, flat));
+  });
+
+  it('western washing machine speeds up the laundry regen', () => {
+    let base = withTenant(withFloors(freshState(), 1), 0, { happiness: 20 });
+    base = { ...base, tick: 10, upgrades: { ...base.upgrades, laundry: true } };
+    const west = { ...base, tuzex: { ...base.tuzex, pracka: true } };
+    const gain = (st: GameState) => tick(st).buildings[0].flats[0].tenant!.happiness - 20;
+    expect(gain(west)).toBeGreaterThan(gain(base));
+  });
+});
+
 describe('save migration', () => {
-  it('fills v2 + v3 fields into a v1 save', () => {
+  it('fills v2 + v3 + v4 fields into a v1 save', () => {
     const v1: Partial<GameState> = { ...freshState(), version: 1 };
     delete v1.energy;
     delete v1.courtyard;
     delete v1.caretakerHired;
+    delete v1.bony;
+    delete v1.tuzex;
     const migrated = migrateSave(v1 as GameState, 1);
     expect(migrated.energy).toBe(BRIGADE_ENERGY_MAX);
     expect(migrated.courtyard.piskoviste).toBe(false);
     expect(migrated.caretakerHired).toBe(false);
+    expect(migrated.bony).toBe(0);
+    expect(migrated.tuzex.tv).toBe(false);
     expect(migrated.buildings[0].flats[0].tenant!.movedInAt).toBe(0);
     expect(migrated.buildings[0].flats[0].tenant!.quirkDone).toBe(false);
+    expect(migrated.buildings[0].flats[0].tenant!.evictionAt).toBeNull();
     expect(migrated.version).toBe(SAVE_VERSION);
   });
 

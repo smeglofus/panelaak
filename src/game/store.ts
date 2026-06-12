@@ -4,27 +4,36 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CourtyardId, GameState, UpgradeId } from './types';
+import type { CourtyardId, GameState, TuzexId, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveChoice } from './events';
 import { computeOffline, type OfflineSummary } from './offline';
 import {
   addLog,
   applyBrigadeWork,
+  clamp,
   createFlat,
   createInitialState,
   mainBuilding,
+  mapTenants,
   migrateSave,
   SAVE_VERSION,
+  updateFlat,
 } from './state';
 import {
   CARETAKER_MIN_FLOORS,
   COURTYARD_COSTS,
   elevatorRepairCost,
+  EVICTION_COST,
+  EVICTION_DELAY_SECONDS,
   FLATS_PER_FLOOR,
   floorCost,
+  KAVA_COST_BONY,
+  KAVA_HAPPINESS_BONUS,
   MAX_FLOORS,
   PROBLEM_DEFS,
+  REP_EVICTION,
+  TUZEX_COSTS,
   UPGRADE_COSTS,
 } from './economy';
 import { CS } from './content.cs';
@@ -45,6 +54,9 @@ interface PanelakStore {
   fireCaretaker: () => void;
   repairElevator: () => void;
   repairProblem: (flatIndex: number) => void;
+  requestEviction: (flatIndex: number) => void;
+  buyTuzex: (id: TuzexId) => void;
+  buyKava: () => void;
   resolveChoice: (optionId: string) => void;
   dismissOffline: () => void;
   applyOfflineProgress: () => void;
@@ -138,9 +150,7 @@ export const useGame = create<PanelakStore>()(
         const flats = b.flats.map((f) =>
           f.index === flatIndex ? { ...f, problem: null } : f,
         );
-        const label = CS.ui.flatLabel(flatIndex + 1);
-        const text =
-          flat.problem === 'leak' ? CS.toasts.leakFixed(label) : CS.toasts.windowFixed(label);
+        const text = CS.problems[flat.problem].fixed(CS.ui.flatLabel(flatIndex + 1));
         let next: GameState = {
           ...game,
           money: game.money - cost,
@@ -176,6 +186,56 @@ export const useGame = create<PanelakStore>()(
         if (!game.caretakerHired) return;
         let next: GameState = { ...game, caretakerHired: false };
         next = addLog(next, 'info', CS.toasts.caretakerFired);
+        set({ game: next });
+      },
+
+      requestEviction: (flatIndex) => {
+        const { game } = get();
+        const flat = mainBuilding(game).flats.find((f) => f.index === flatIndex);
+        const t = flat?.tenant;
+        if (!t || t.evictionAt !== null) return;
+        if (t.archetype === 'pensioner') {
+          // Paní Vlasta is un-evictable. Three chairmen have tried.
+          set({ game: addLog(game, 'info', CS.ui.evictionRefused) });
+          return;
+        }
+        if (game.money < EVICTION_COST) return;
+        let next: GameState = {
+          ...game,
+          money: game.money - EVICTION_COST,
+          reputation: clamp(game.reputation + REP_EVICTION, 0, 100),
+        };
+        next = updateFlat(next, flatIndex, (f) => ({
+          ...f,
+          tenant: { ...f.tenant!, evictionAt: game.tick + EVICTION_DELAY_SECONDS },
+        }));
+        next = addLog(next, 'info', CS.toasts.evictionFiled(t.name));
+        set({ game: next });
+      },
+
+      buyTuzex: (id) => {
+        const { game } = get();
+        const cost = TUZEX_COSTS[id];
+        if (game.tuzex[id] || game.bony < cost) return;
+        if (id === 'pracka' && !game.upgrades.laundry) return;
+        let next: GameState = {
+          ...game,
+          bony: game.bony - cost,
+          tuzex: { ...game.tuzex, [id]: true },
+        };
+        next = addLog(next, 'good', CS.toasts.tuzexBought(CS.tuzex[id].name));
+        set({ game: next });
+      },
+
+      buyKava: () => {
+        const { game } = get();
+        if (game.bony < KAVA_COST_BONY) return;
+        let next: GameState = { ...game, bony: game.bony - KAVA_COST_BONY };
+        next = mapTenants(next, (t) => ({
+          ...t,
+          happiness: clamp(t.happiness + KAVA_HAPPINESS_BONUS, 0, 100),
+        }));
+        next = addLog(next, 'good', CS.toasts.kavaServed);
         set({ game: next });
       },
 

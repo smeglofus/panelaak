@@ -53,7 +53,16 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   garden beds, dryer, garage — each rendered in the scene, each with its own
   events (stolen tomatoes, football through a window, lost dog Azor).
 - The tenant card shows a diagnosis of everything pushing a tenant's mood up
-  or down.
+  or down — and a **"podat návrh na výpověď"** button (paid, slow, costs
+  reputation; paní Vlasta is officially un-evictable).
+- A **calendar** runs underneath (one day = 30 s, the game starts on
+  1. dubna 1983): winters drain heating money and freeze radiators, every
+  July 1st brings the planned hot-water outage, Christmas sweetens the house
+  and on May Day the entrance decoration is… expected.
+- Tenants file **requests** (dog permits, rent deferrals, a hallway light
+  bulb) you approve or refuse, and the vekslák leaves **bony** you can spend
+  in the **Tuzex** catalogue: a colour TV, a western washing machine, digital
+  watches for the caretaker.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

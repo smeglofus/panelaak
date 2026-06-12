@@ -32,6 +32,7 @@ export function makeTenant(overrides: Partial<Tenant> & { archetype?: ArchetypeI
     unhappySince: null,
     movedInAt: 0,
     quirkDone: false,
+    evictionAt: null,
     ...overrides,
   };
 }

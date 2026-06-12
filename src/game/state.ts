@@ -19,7 +19,7 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 const LOG_CAP = 50;
 
@@ -51,6 +51,8 @@ export function createInitialState(seed?: number): GameState {
     upgrades: { elevatorNdr: false, cellar: false, satellite: false, laundry: false },
     courtyard: { piskoviste: false, lavicky: false, zahonky: false, susak: false, garaz: false },
     caretakerHired: false,
+    bony: 0,
+    tuzex: { tv: false, pracka: false, digitalky: false },
     activeEvents: [],
     pendingChoice: null,
     milestones: {
@@ -166,6 +168,23 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
                   quirkDone: f.tenant.quirkDone ?? false,
                 },
               }
+            : f,
+        ),
+      })),
+    };
+  }
+  if (fromVersion < 4) {
+    // v4 added the calendar era: bony/Tuzex and eviction proceedings.
+    g = {
+      ...g,
+      version: 4,
+      bony: g.bony ?? 0,
+      tuzex: { tv: false, pracka: false, digitalky: false },
+      buildings: g.buildings.map((b) => ({
+        ...b,
+        flats: b.flats.map((f) =>
+          f.tenant
+            ? { ...f, tenant: { ...f.tenant, evictionAt: f.tenant.evictionAt ?? null } }
             : f,
         ),
       })),

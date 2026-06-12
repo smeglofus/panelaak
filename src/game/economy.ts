@@ -10,6 +10,7 @@ import type {
   MilestoneId,
   ProblemId,
   Tenant,
+  TuzexId,
   UpgradeId,
 } from './types';
 import { ARCHETYPES } from './tenants';
@@ -144,7 +145,57 @@ export const LEAK_CHANCE = 1 / 240;
 export const PROBLEM_DEFS: Record<ProblemId, { repairCost: number; targetPenalty: number }> = {
   leak: { repairCost: 40, targetPenalty: 30 },
   window: { repairCost: 25, targetPenalty: 20 },
+  radiator: { repairCost: 35, targetPenalty: 25 },
 };
+
+// --- Calendar effects (zima / léto) -------------------------------------------
+
+/** Heating drain per floor per second during the topná sezóna. */
+export const HEATING_COST_PER_FLOOR = 0.15;
+export const WINTER_TARGET_PENALTY = 5;
+export const SUMMER_TARGET_BONUS = 3;
+/** Winter-only radiator failures, building-wide roll → mean ~5 min. */
+export const RADIATOR_CHANCE = 1 / 300;
+/** The annual planned July outage. Duration in seconds. */
+export const ODSTAVKA_DURATION = 180;
+export const VANOCE_HAPPINESS_BONUS = 15;
+export const MAJ_DECORATION_COST = 40;
+export const REP_MAJ_DECORATED = 6;
+export const REP_MAJ_SKIPPED = -6;
+
+// --- Eviction (výpověď) ---------------------------------------------------------
+
+export const EVICTION_COST = 150;
+export const REP_EVICTION = -8;
+/** The "řízení" takes a while — the neighbour stays and grumbles meanwhile. */
+export const EVICTION_DELAY_SECONDS = 60;
+
+// --- Bony & Tuzex ----------------------------------------------------------------
+
+/** A vekslák leaves an envelope roughly once per 5 minutes. */
+export const VEKSLAK_BON_CHANCE = 1 / 300;
+export const TETA_BONY = 2;
+
+export const MILESTONE_BONY: Record<MilestoneId, number> = {
+  firstFullFloor: 0,
+  first1000: 1,
+  elevatorInstalled: 2,
+  eightFloors: 3,
+  vzornyDum: 5,
+};
+
+export const TUZEX_COSTS: Record<TuzexId, number> = {
+  tv: 5,
+  pracka: 4,
+  digitalky: 3,
+};
+
+export const KAVA_COST_BONY = 2;
+export const KAVA_HAPPINESS_BONUS = 15;
+export const TV_TARGET_BONUS = 10;
+/** Western washing machine: laundry regen 1.6 → 2.0. */
+export const LAUNDRY_REGEN_MULT_WEST = 2.0;
+export const DIGITALKY_FIX_MULT = 2;
 
 // --- Domovník (pan Fanda) -----------------------------------------------------
 
