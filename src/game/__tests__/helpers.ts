@@ -1,0 +1,55 @@
+// Shared test fixtures: deterministic states and a deep-freeze purity guard.
+
+import type { ArchetypeId, Building, Flat, GameState, Tenant } from '../types';
+import { createInitialState, createFlat } from '../state';
+import { FLATS_PER_FLOOR } from '../economy';
+
+export const TEST_SEED = 42;
+
+export function freshState(seed: number = TEST_SEED): GameState {
+  return createInitialState(seed);
+}
+
+/** Replace the building with `floors` floors of empty flats. */
+export function withFloors(s: GameState, floors: number): GameState {
+  const flats: Flat[] = [];
+  for (let floor = 1; floor <= floors; floor++) {
+    for (let i = 0; i < FLATS_PER_FLOOR; i++) {
+      flats.push(createFlat(flats.length, floor));
+    }
+  }
+  const building: Building = { floors, flats, elevatorBroken: false };
+  return { ...s, buildings: [building] };
+}
+
+export function makeTenant(overrides: Partial<Tenant> & { archetype?: ArchetypeId } = {}): Tenant {
+  return {
+    id: 999,
+    archetype: 'shift',
+    name: 'Testovací soudruh',
+    flavor: '„Testuju.“',
+    happiness: 70,
+    unhappySince: null,
+    ...overrides,
+  };
+}
+
+export function withTenant(
+  s: GameState,
+  flatIndex: number,
+  overrides: Partial<Tenant> & { archetype?: ArchetypeId } = {},
+): GameState {
+  const b = s.buildings[0];
+  const flats = b.flats.map((f) =>
+    f.index === flatIndex ? { ...f, tenant: makeTenant({ id: 1000 + flatIndex, ...overrides }) } : f,
+  );
+  return { ...s, buildings: [{ ...b, flats }] };
+}
+
+export function deepFreeze<T>(obj: T): T {
+  if (obj && typeof obj === 'object' && !Object.isFrozen(obj)) {
+    Object.freeze(obj);
+    for (const value of Object.values(obj)) deepFreeze(value);
+  }
+  return obj;
+}

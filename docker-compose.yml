@@ -1,0 +1,31 @@
+# `docker compose up` serves the game on http://localhost:8080 out of the box.
+# The Traefik labels are inert until you attach the service to a Traefik
+# network — see the commented block at the bottom and the README.
+
+services:
+  panelak:
+    build: .
+    image: panelak-tycoon:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      # Replace the host rule with your domain:
+      - "traefik.http.routers.panelak.rule=Host(`panelak.example.com`)"
+      - "traefik.http.routers.panelak.entrypoints=websecure"
+      - "traefik.http.routers.panelak.tls.certresolver=letsencrypt"
+      - "traefik.http.services.panelak.loadbalancer.server.port=80"
+    # Uncomment to join an existing Traefik network (and drop the ports above):
+    # networks:
+    #   - web
+
+# networks:
+#   web:
+#     external: true

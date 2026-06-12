@@ -1,0 +1,103 @@
+# Panelák Tycoon
+
+> Postavte a spravujte panelák v Československu 80. let. Vybírejte nájem,
+> opravujte výtah, přežijte domovní schůzi.
+
+An idle/management browser game: you run a prefab apartment block (panelák) in
+1980s Czechoslovakia. Free, static, no backend, no accounts, no monetization.
+Game content is intentionally in Czech — it's part of the identity. Code,
+comments and identifiers are in English.
+
+Built per [spec.md](spec.md) (MVP v0.1).
+
+![screenshot](docs/screenshot.png)
+
+## Quick start
+
+```bash
+npm install
+npm run dev        # → http://localhost:5173
+```
+
+Other scripts:
+
+```bash
+npm test           # vitest — economy, tick reducer, events, offline calc
+npm run lint       # eslint
+npm run build      # typecheck + production build into dist/
+npm run preview    # serve the production build locally
+```
+
+Requires Node 18+ for local dev (the Docker build uses Node 20).
+
+## How it plays
+
+- Occupied flats pay rent (Kčs) every second; happiness scales the income
+  (never below a 0.2× trickle — you can always dig yourself out).
+- Tenants move in on their own, each with an archetype and a quirk: the
+  pensioner never leaves but drags down the floor's mood, the vekslák pays
+  1.5× but attracts the StB, pan Lojza throws parties.
+- The elevator exists from the 3rd floor up and breaks down regularly. Hot
+  water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
+  Důvod: nepoteče.")
+- Spend money on new floors (up to 8), repairs and four upgrades. The soft win
+  is the facade plaque **Vzorný dům socialistické péče**: all 16 flats
+  occupied at ≥80 % average happiness.
+- Closing the tab is fine — offline progress accrues at 50 % rate, capped at
+  8 hours. The save lives in `localStorage` (versioned schema, auto-saved
+  every tick).
+
+## Architecture
+
+```
+src/
+  game/        pure TypeScript, ZERO React imports
+    types.ts        all interfaces (GameState is the single source of truth)
+    economy.ts      every cost curve and tuning constant in one place
+    tick.ts         pure tick(state): state reducer, runs once per second
+    events.ts       declarative event defs { id, weight, condition, apply }
+    tenants.ts      archetype table + move-in logic
+    offline.ts      pure offline fast-forward (50 % rate, 8 h cap)
+    rng.ts          seedable mulberry32 — the seed lives in GameState
+    state.ts        initial state factory + shared pure helpers
+    content.cs.ts   ALL Czech strings, names, flavor text
+    store.ts        zustand store + persist (the only impure layer)
+  components/  React renders state, dispatches actions, nothing else
+  styles/      single global.css — the whole panelák is CSS + SVG + emoji
+```
+
+The hard rule from the spec: `game/` contains no React and no side effects.
+`tick()` advances the world deterministically from `(state, seed)` — which is
+why the economy has real unit tests instead of hopes and prayers.
+
+## Deployment
+
+Multi-stage Docker build (node → nginx static, final image ≈ 50 MB nginx:alpine
+base + ~200 kB of assets):
+
+```bash
+docker compose up --build    # → http://localhost:8080
+```
+
+For a real deployment behind Traefik: set your domain in the
+`traefik.http.routers.panelak.rule` label in
+[docker-compose.yml](docker-compose.yml), uncomment the external `web` network
+block, and drop the `ports:` mapping. A healthcheck is built into the image.
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint + tests +
+build + docker build on every push; pushing the image to a registry is left as
+a commented template.
+
+## Tuning
+
+Every number that matters lives in
+[src/game/economy.ts](src/game/economy.ts) — rent rates, cost curves, event
+chances, happiness physics. Pacing targets: first upgrade ~30 s, first new
+floor ~2–3 min, full 8-floor building in ~2–3 hours of mixed play.
+
+## Roadmap
+
+- **v0.2** — pixel-art sprite pass, sound (elevator ding, sídliště ambience),
+  more events, English toggle, proper mobile layout.
+- **v0.3+** — prestige: *privatizace 1991*. `GameState` is already shaped for
+  it (`buildings: Building[]`, `meta.prestigeLevel`).
