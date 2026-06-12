@@ -4,9 +4,9 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GameState, UpgradeId } from './types';
+import type { CourtyardId, GameState, UpgradeId } from './types';
 import { tick } from './tick';
-import { resolveSchuze } from './events';
+import { resolveChoice } from './events';
 import { computeOffline, type OfflineSummary } from './offline';
 import {
   addLog,
@@ -18,11 +18,13 @@ import {
   SAVE_VERSION,
 } from './state';
 import {
+  CARETAKER_MIN_FLOORS,
+  COURTYARD_COSTS,
   elevatorRepairCost,
   FLATS_PER_FLOOR,
   floorCost,
-  LEAK_REPAIR_COST,
   MAX_FLOORS,
+  PROBLEM_DEFS,
   UPGRADE_COSTS,
 } from './economy';
 import { CS } from './content.cs';
@@ -38,8 +40,11 @@ interface PanelakStore {
   setHelpOpen: (open: boolean) => void;
   buyFloor: () => void;
   buyUpgrade: (id: UpgradeId) => void;
+  buyCourtyard: (id: CourtyardId) => void;
+  hireCaretaker: () => void;
+  fireCaretaker: () => void;
   repairElevator: () => void;
-  repairLeak: (flatIndex: number) => void;
+  repairProblem: (flatIndex: number) => void;
   resolveChoice: (optionId: string) => void;
   dismissOffline: () => void;
   applyOfflineProgress: () => void;
@@ -123,26 +128,60 @@ export const useGame = create<PanelakStore>()(
         set({ game: next });
       },
 
-      repairLeak: (flatIndex) => {
+      repairProblem: (flatIndex) => {
         const { game } = get();
         const b = mainBuilding(game);
         const flat = b.flats.find((f) => f.index === flatIndex);
-        if (!flat || flat.problem !== 'leak' || game.money < LEAK_REPAIR_COST) return;
+        if (!flat?.problem) return;
+        const cost = PROBLEM_DEFS[flat.problem].repairCost;
+        if (game.money < cost) return;
         const flats = b.flats.map((f) =>
           f.index === flatIndex ? { ...f, problem: null } : f,
         );
+        const label = CS.ui.flatLabel(flatIndex + 1);
+        const text =
+          flat.problem === 'leak' ? CS.toasts.leakFixed(label) : CS.toasts.windowFixed(label);
         let next: GameState = {
           ...game,
-          money: game.money - LEAK_REPAIR_COST,
+          money: game.money - cost,
           buildings: [{ ...b, flats }],
         };
-        next = addLog(next, 'good', CS.toasts.leakFixed(CS.ui.flatLabel(flatIndex + 1)));
+        next = addLog(next, 'good', text);
+        set({ game: next });
+      },
+
+      buyCourtyard: (id) => {
+        const { game } = get();
+        const cost = COURTYARD_COSTS[id];
+        if (game.courtyard[id] || game.money < cost) return;
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          courtyard: { ...game.courtyard, [id]: true },
+        };
+        next = addLog(next, 'good', CS.toasts.courtyardBuilt(CS.courtyard[id].name));
+        set({ game: next });
+      },
+
+      hireCaretaker: () => {
+        const { game } = get();
+        if (game.caretakerHired || mainBuilding(game).floors < CARETAKER_MIN_FLOORS) return;
+        let next: GameState = { ...game, caretakerHired: true };
+        next = addLog(next, 'good', CS.toasts.caretakerHired);
+        set({ game: next });
+      },
+
+      fireCaretaker: () => {
+        const { game } = get();
+        if (!game.caretakerHired) return;
+        let next: GameState = { ...game, caretakerHired: false };
+        next = addLog(next, 'info', CS.toasts.caretakerFired);
         set({ game: next });
       },
 
       resolveChoice: (optionId) => {
         const { game } = get();
-        set({ game: resolveSchuze(game, optionId) });
+        set({ game: resolveChoice(game, optionId) });
       },
 
       dismissOffline: () => set({ offlineSummary: null }),

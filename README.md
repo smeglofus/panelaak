@@ -42,9 +42,18 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
 - A how-to overlay opens on a new game; the **?** button in the header brings
   it back. The side panel keeps a short house chronicle (kronika) of recent
   events.
-- Tenants move in on their own, each with an archetype and a quirk: the
+- Tenants move in on their own, each of **10 archetypes** with a quirk: the
   pensioner never leaves but drags down the floor's mood, the vekslák pays
-  1.5× but attracts the StB, pan Lojza throws parties.
+  1.5× but attracts the StB, pan Lojza throws parties, the kutil fixes leaks
+  for free (and drills on Saturdays), the disident earns the house a
+  solidarity bonus if he survives long enough.
+- From 3 floors up you can hire **pan Fanda the caretaker**: he takes a wage
+  and quietly pays for + performs repairs himself.
+- The **courtyard (dvorek)** is a second build dimension: sandbox, benches,
+  garden beds, dryer, garage — each rendered in the scene, each with its own
+  events (stolen tomatoes, football through a window, lost dog Azor).
+- The tenant card shows a diagnosis of everything pushing a tenant's mood up
+  or down.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

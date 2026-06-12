@@ -19,7 +19,7 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 const LOG_CAP = 50;
 
@@ -34,7 +34,7 @@ export function createInitialState(seed?: number): GameState {
   // Start with one floor, two flats, and one reliable tenant already home —
   // the game must feel alive within the first minute (spec §2).
   const flats = [createFlat(0, 1), createFlat(1, 1)];
-  flats[0].tenant = createTenant(rng, 1, TENANT_STARTING_HAPPINESS + 10, 'shift');
+  flats[0].tenant = createTenant(rng, 1, TENANT_STARTING_HAPPINESS + 10, 0, 'shift');
 
   const building: Building = { floors: 1, flats, elevatorBroken: false };
 
@@ -49,6 +49,8 @@ export function createInitialState(seed?: number): GameState {
     buildings: [building],
     meta: { prestigeLevel: 0 },
     upgrades: { elevatorNdr: false, cellar: false, satellite: false, laundry: false },
+    courtyard: { piskoviste: false, lavicky: false, zahonky: false, susak: false, garaz: false },
+    caretakerHired: false,
     activeEvents: [],
     pendingChoice: null,
     milestones: {
@@ -144,6 +146,30 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
   if (fromVersion < 2) {
     // v2 added the Akce Z energy pool.
     g = { ...g, version: 2, energy: BRIGADE_ENERGY_MAX };
+  }
+  if (fromVersion < 3) {
+    // v3 added the courtyard, the caretaker and tenant tenure fields.
+    g = {
+      ...g,
+      version: 3,
+      courtyard: { piskoviste: false, lavicky: false, zahonky: false, susak: false, garaz: false },
+      caretakerHired: false,
+      buildings: g.buildings.map((b) => ({
+        ...b,
+        flats: b.flats.map((f) =>
+          f.tenant
+            ? {
+                ...f,
+                tenant: {
+                  ...f.tenant,
+                  movedInAt: f.tenant.movedInAt ?? 0,
+                  quirkDone: f.tenant.quirkDone ?? false,
+                },
+              }
+            : f,
+        ),
+      })),
+    };
   }
   return g;
 }

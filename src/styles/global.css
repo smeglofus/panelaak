@@ -596,6 +596,74 @@ button {
   z-index: 0;
 }
 
+/* --- Courtyard (dvorek) ------------------------------------------------------- */
+
+.courtyard {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  margin-left: 205px;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  z-index: 0;
+}
+
+.cy-item {
+  flex-shrink: 0;
+}
+
+.cy-sandbox {
+  width: 56px;
+  height: 16px;
+  background: #8a6f4d;
+  border: 3px solid #6e573c;
+  position: relative;
+}
+
+.cy-sand {
+  position: absolute;
+  inset: 1px;
+  background: #d9c489;
+}
+
+.cy-beds {
+  display: flex;
+  gap: 4px;
+}
+
+.cy-beds div {
+  width: 14px;
+  height: 20px;
+  background: linear-gradient(#5e7a42, #4c6336);
+  border: 2px solid #3f3a2c;
+  border-radius: 2px 2px 0 0;
+}
+
+.cy-garage {
+  width: 64px;
+  height: 42px;
+  background: var(--concrete-dark);
+  border: 1px solid #6a6a63;
+  position: relative;
+  box-shadow: 5px 4px 0 rgba(25, 28, 24, 0.15);
+}
+
+.cy-garage-door {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 30px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #7a7a72 0 4px,
+    #6e6e67 4px 6px
+  );
+  border: 2px solid #5e5e57;
+  border-bottom: none;
+}
+
 /* --- Side panel (domovní správa) -------------------------------------------- */
 
 .panel {
@@ -757,6 +825,23 @@ button {
   font-size: 10.5px;
   font-style: italic;
   color: #8a8170;
+}
+
+.caretaker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.caretaker-status {
+  font-size: 12px;
+}
+
+.btn-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .kronika {
@@ -997,6 +1082,38 @@ button {
   font-size: 11px;
   color: #6e685a;
   margin: 8px 0 4px;
+}
+
+.card-factors {
+  margin: 8px 0 4px;
+  padding: 7px 9px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px dashed var(--paper-line);
+}
+
+.factors-title {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #7c7666;
+  margin-bottom: 4px;
+}
+
+.card-factors ul {
+  list-style: none;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.factor-good {
+  color: var(--good);
+}
+
+.factor-bad {
+  color: var(--bad);
 }
 
 .card-flavor {

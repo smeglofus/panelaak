@@ -2,7 +2,16 @@
 // Numbers target: first upgrade ~30 s, first new floor ~2-3 min, full 8-floor
 // building in ~2-3 hours of mixed active/idle play (spec §5).
 
-import type { Building, GameState, MilestoneId, Tenant, UpgradeId } from './types';
+import type {
+  Building,
+  CourtyardId,
+  Flat,
+  GameState,
+  MilestoneId,
+  ProblemId,
+  Tenant,
+  UpgradeId,
+} from './types';
 import { ARCHETYPES } from './tenants';
 
 // --- Building ---------------------------------------------------------------
@@ -39,12 +48,22 @@ export function tenantRentPerSec(tenant: Tenant): number {
   return rentPerSec(ARCHETYPES[tenant.archetype].rentMult, tenant.happiness);
 }
 
+/** Rent of one flat including courtyard synergies (garage × vekslák). */
+export function flatRentPerSec(state: GameState, flat: Flat): number {
+  if (!flat.tenant) return 0;
+  let rent = tenantRentPerSec(flat.tenant);
+  if (state.courtyard.garaz && flat.tenant.archetype === 'vekslak') {
+    rent *= GARAGE_VEKSLAK_MULT;
+  }
+  return rent;
+}
+
 /** Current income per second of the whole building, including upgrades. */
 export function incomePerSec(state: GameState): number {
   const mult = state.upgrades.cellar ? CELLAR_RENT_MULT : 1;
   let sum = 0;
   for (const flat of state.buildings[0].flats) {
-    if (flat.tenant) sum += tenantRentPerSec(flat.tenant);
+    sum += flatRentPerSec(state, flat);
   }
   return sum * mult;
 }
@@ -58,10 +77,18 @@ export const ELEVATOR_DECAY_MULT = 3; // broken elevator: floors 3+ decay 3× fa
 export const ELEVATOR_BROKEN_TARGET_PENALTY = 45;
 export const COUPLE_ELEVATOR_EXTRA_PENALTY = 15;
 export const HOT_WATER_TARGET_PENALTY = 40;
-export const LEAK_TARGET_PENALTY = 30;
 export const PENSIONER_NEIGHBOR_DRAG = 5;
+export const SVAZAK_NEIGHBOR_DRAG = 5;
+export const MUSICIAN_NEIGHBOR_DRAG = 3;
+export const FAMILY_HOT_WATER_EXTRA = 20;
 export const SATELLITE_TARGET_BONUS = 20;
 export const LAUNDRY_REGEN_MULT = 1.6;
+
+// Courtyard happiness effects
+export const ZAHONKY_TARGET_BONUS = 3;
+export const SUSAK_TARGET_BONUS = 2;
+export const PISKOVISTE_FAMILY_BONUS = 10;
+export const LAVICKY_PENSIONER_BONUS = 10;
 
 // --- Tenants ----------------------------------------------------------------
 
@@ -112,7 +139,28 @@ export function elevatorRepairCost(floors: number): number {
 
 /** Building-wide leak rate (one roll per second) → mean ~4 min between leaks. */
 export const LEAK_CHANCE = 1 / 240;
-export const LEAK_REPAIR_COST = 40;
+
+/** Per-flat problems: repair price and how hard they sit on the mood. */
+export const PROBLEM_DEFS: Record<ProblemId, { repairCost: number; targetPenalty: number }> = {
+  leak: { repairCost: 40, targetPenalty: 30 },
+  window: { repairCost: 25, targetPenalty: 20 },
+};
+
+// --- Domovník (pan Fanda) -----------------------------------------------------
+
+export const CARETAKER_MIN_FLOORS = 3;
+export const CARETAKER_WAGE_PER_SEC = 1.5;
+/** Per problem per second → he gets to it in ~25 s. Most of the time. */
+export const CARETAKER_FIX_CHANCE = 1 / 25;
+
+// --- Tenant quirks --------------------------------------------------------------
+
+/** Kutil notices a leak roughly once per two minutes and fixes it for free. */
+export const KUTIL_FIX_CHANCE = 1 / 120;
+export const DISIDENT_LOYALTY_SECONDS = 1800;
+export const DISIDENT_LOYALTY_REP = 15;
+export const MUSICIAN_MOVE_IN_REP = 5;
+export const GARAGE_VEKSLAK_MULT = 1.2;
 
 // --- Events -----------------------------------------------------------------
 
@@ -154,6 +202,26 @@ export const UPGRADE_COSTS: Record<UpgradeId, number> = {
 };
 
 export const CELLAR_RENT_MULT = 1.1;
+
+// --- Courtyard (dvorek) --------------------------------------------------------
+
+export const COURTYARD_COSTS: Record<CourtyardId, number> = {
+  susak: 200,
+  lavicky: 250,
+  piskoviste: 300,
+  zahonky: 350,
+  garaz: 1000,
+};
+
+export const AZOR_SEARCH_COST = 30;
+export const AZOR_FOUND_BONUS = 8;
+export const AZOR_SKIP_PENSIONER_HIT = 10;
+export const REP_AZOR_SKIP = -2;
+export const RAJCATA_BONUS = 10;
+export const ZLODEJ_PENSIONER_HIT = 10;
+export const REP_ZLODEJ = -2;
+export const REP_TRABANT = -2;
+export const VRTANI_HIT = 15;
 
 // --- Milestones -------------------------------------------------------------
 

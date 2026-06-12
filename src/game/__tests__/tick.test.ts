@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { tick } from '../tick';
-import { resolveSchuze } from '../events';
+import { happinessTarget, tick } from '../tick';
+import { resolveChoice } from '../events';
 import {
   BRIGADE_ENERGY_COST,
   BRIGADE_ENERGY_MAX,
   brigadeReward,
+  incomePerSec,
   MILESTONE_REWARDS,
   rentPerSec,
 } from '../economy';
@@ -16,8 +17,8 @@ import { deepFreeze, freshState, withFloors, withTenant } from './helpers';
 function runTicks(s: GameState, n: number): GameState {
   for (let i = 0; i < n; i++) {
     s = tick(s);
-    // The schůze modal pauses the game — auto-resolve it in tests.
-    if (s.pendingChoice) s = resolveSchuze(s, 'skip');
+    // Choice modals pause the game — auto-resolve them in tests.
+    if (s.pendingChoice) s = resolveChoice(s, 'skip');
   }
   return s;
 }
@@ -156,12 +157,111 @@ describe('Akce Z (brigade work)', () => {
   });
 });
 
+describe('domovník pan Fanda', () => {
+  it('fixes a broken elevator eventually and pays from the fund', () => {
+    let s = withTenant(withFloors(freshState(), 3), 0, { happiness: 80 });
+    s = {
+      ...s,
+      money: 5000,
+      caretakerHired: true,
+      buildings: [{ ...s.buildings[0], elevatorBroken: true }],
+    };
+    const after = runTicks(s, 120);
+    expect(after.buildings[0].elevatorBroken).toBe(false);
+    expect(after.log.some((e) => e.text.includes('Fanda opravil výtah'))).toBe(true);
+  });
+
+  it('takes a wage every tick', () => {
+    let s = withFloors(freshState(), 3);
+    s = {
+      ...s,
+      money: 1000,
+      caretakerHired: true,
+      // Pre-claim the milestone so its cash reward doesn't mask the wage.
+      milestones: { ...s.milestones, elevatorInstalled: true },
+    };
+    const next = tick(s);
+    // No tenants → no rent; only the wage leaves the fund.
+    expect(next.money).toBeLessThan(1000);
+  });
+
+  it('does not repair when the fund is empty', () => {
+    let s = withFloors(freshState(), 3);
+    s = {
+      ...s,
+      money: 0,
+      caretakerHired: true,
+      milestones: { ...s.milestones, elevatorInstalled: true },
+      buildings: [{ ...s.buildings[0], elevatorBroken: true }],
+    };
+    const after = runTicks(s, 60);
+    expect(after.buildings[0].elevatorBroken).toBe(true);
+  });
+});
+
+describe('archetype quirks & courtyard', () => {
+  it('kutil fixes a leak for free over time', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'kutil', happiness: 80 });
+    const b = s.buildings[0];
+    s = {
+      ...s,
+      buildings: [
+        { ...b, flats: b.flats.map((f) => (f.index === 0 ? { ...f, problem: 'leak' as const } : f)) },
+      ],
+    };
+    const after = runTicks(s, 600);
+    expect(after.log.some((e) => e.text.includes('Jarda'))).toBe(true);
+  });
+
+  it('disident pays the loyalty reputation bonus after 30 minutes', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'disident', happiness: 80, movedInAt: 0 });
+    s = { ...s, tick: 1800 };
+    const next = tick(s);
+    expect(next.reputation).toBeGreaterThan(s.reputation);
+    expect(next.buildings[0].flats[0].tenant!.quirkDone).toBe(true);
+    // …and only once.
+    const again = tick(next);
+    expect(again.reputation).toBeLessThanOrEqual(next.reputation + 1); // move-in rep at most
+  });
+
+  it('family suffers extra without hot water; sandbox helps them', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'family' });
+    const flat = s.buildings[0].flats[0];
+
+    const withOutage = { ...s, activeEvents: [{ id: 'hotWater', remaining: 60 }] };
+    const shiftOutage = withTenant(withOutage, 0, { archetype: 'shift' });
+    expect(happinessTarget(withOutage, withOutage.buildings[0].flats[0])).toBeLessThan(
+      happinessTarget(shiftOutage, shiftOutage.buildings[0].flats[0]),
+    );
+
+    const withSandbox = { ...s, courtyard: { ...s.courtyard, piskoviste: true } };
+    expect(happinessTarget(withSandbox, flat)).toBeGreaterThan(happinessTarget(s, flat));
+  });
+
+  it('garage makes the vekslák pay more', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'vekslak', happiness: 80 });
+    const base = incomePerSec(s);
+    const withGarage = { ...s, courtyard: { ...s.courtyard, garaz: true } };
+    expect(incomePerSec(withGarage)).toBeCloseTo(base * 1.2, 5);
+  });
+});
+
 describe('save migration', () => {
-  it('fills the v2 energy field into a v1 save', () => {
+  it('fills v2 + v3 fields into a v1 save', () => {
     const v1: Partial<GameState> = { ...freshState(), version: 1 };
     delete v1.energy;
+    delete v1.courtyard;
+    delete v1.caretakerHired;
     const migrated = migrateSave(v1 as GameState, 1);
     expect(migrated.energy).toBe(BRIGADE_ENERGY_MAX);
+    expect(migrated.courtyard.piskoviste).toBe(false);
+    expect(migrated.caretakerHired).toBe(false);
+    expect(migrated.buildings[0].flats[0].tenant!.movedInAt).toBe(0);
+    expect(migrated.buildings[0].flats[0].tenant!.quirkDone).toBe(false);
     expect(migrated.version).toBe(SAVE_VERSION);
   });
 

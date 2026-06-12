@@ -1,7 +1,7 @@
 // ALL Czech strings, names and flavor text live here (spec §3: hardcoded Czech,
 // single content file). Identifiers stay English; the panelák speaks Czech.
 
-import type { ArchetypeId, MilestoneId, UpgradeId } from './types';
+import type { ArchetypeId, CourtyardId, MilestoneId, ProblemId, UpgradeId } from './types';
 
 export interface ArchetypeContent {
   label: string;
@@ -54,6 +54,62 @@ export const CS = {
     kronika: 'Kronika domu',
     kronikaEmpty: 'Zatím se nic nestalo. To se změní.',
     help: 'Nápověda',
+    domovnik: 'Domovník',
+    hireCaretaker: (wage: string) => `Najmout pana Fandu (mzda ${wage})`,
+    fireCaretaker: 'Propustit',
+    caretakerOnDuty: 'Pan Fanda: ve službě.',
+    caretakerIdle: 'Pan Fanda kouří v kočárkárně. Vše funguje.',
+    caretakerHint: 'Opravy platí z fondu a řeší je sám. Většinou. Časem.',
+    caretakerLocked: 'Domovník dává smysl až od 3 pater.',
+    dvorek: 'Dvorek',
+    repairWindow: 'Zasklít okno',
+    windowInFlat: (flat: string) => `⚽ Rozbité okno — ${flat}`,
+    influences: 'Co na něj působí',
+  },
+
+  problems: {
+    leak: { repair: 'Opravit trubku', list: (flat: string) => `💧 Prasklá trubka — ${flat}` },
+    window: { repair: 'Zasklít okno', list: (flat: string) => `⚽ Rozbité okno — ${flat}` },
+  } satisfies Record<ProblemId, { repair: string; list: (flat: string) => string }>,
+
+  courtyard: {
+    piskoviste: {
+      name: 'Pískoviště',
+      desc: 'Rodiny s dětmi jsou spokojenější. Riziko: dvorní fotbal.',
+    },
+    lavicky: {
+      name: 'Lavičky',
+      desc: 'Důchodkyně mají odkud pozorovat. Všechno a všechny.',
+    },
+    zahonky: {
+      name: 'Záhonky',
+      desc: 'Vůně rajčat pro celý dům. Občas úroda, občas zloděj.',
+    },
+    susak: {
+      name: 'Sušák na prádlo',
+      desc: 'Čisté prádlo ve větru. Drobná radost pro všechny.',
+    },
+    garaz: {
+      name: 'Garáž',
+      desc: 'Vekslák platí o 20 % víc. A trabanty přestanou blokovat vchod.',
+    },
+  } satisfies Record<CourtyardId, { name: string; desc: string }>,
+
+  factors: {
+    satellite: 'Satelit na střeše',
+    zahonky: 'Záhonky na dvorku',
+    susak: 'Sušák na prádlo',
+    piskoviste: 'Pískoviště pod okny',
+    lavicky: 'Lavičky před domem',
+    hotWater: 'Neteče teplá voda',
+    hotWaterFamily: 'Děti se nemají kde koupat',
+    leak: 'Prasklá trubka',
+    window: 'Rozbité okno',
+    elevator: 'Rozbitý výtah',
+    elevatorCouple: 'Schody. Každý den. Pěšky.',
+    pensionerDrag: 'Stížnosti sousedky s pejskem',
+    svazakDrag: 'Soudruh od vedle si vše zapisuje',
+    musicianDrag: 'Večerní cvičení na nástroj',
   },
 
   help: {
@@ -63,6 +119,8 @@ export const CS = {
       'Za vydělané Kčs stavějte patra, opravujte výtah a prasklé trubky a kupujte vylepšení na nástěnce vpravo.',
       'Nemáte na první patro? Akce Z: dokud máte elán, klikejte a přivydělejte si. Elán se obnovuje sám.',
       'Každý nájemník je jiný: vekslák platí 1,5×, ale přitahuje pozornost. Paní Vlasta se neodstěhuje nikdy. Nikdy.',
+      'Od tří pater můžete najmout domovníka — opravy pak řeší (a platí z fondu) sám.',
+      'Dvorek není jen tráva: pískoviště, lavičky nebo záhonky zvedají náladu a přinášejí události.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -115,6 +173,51 @@ export const CS = {
         '„Hlavně klid na spaní po šichtě.“',
       ],
     },
+    kutil: {
+      label: 'Kutil',
+      names: ['Pan Jarda', 'Pan Standa', 'Pan Véna'],
+      flavor: [
+        '„To si spravím sám.“',
+        '„Mám na to nářadí. Mám na všechno nářadí.“',
+        '„Hmoždinka drží tenhle dům pohromadě.“',
+      ],
+    },
+    svazak: {
+      label: 'Svazák',
+      names: ['Soudruh Milan', 'Soudruh Zdeněk', 'Soudruh Ivo'],
+      flavor: [
+        '„Schůze je základ.“',
+        '„Hlásím vzorný stav vchodu.“',
+        '„Nástěnku jsem aktualizoval. Opět.“',
+      ],
+    },
+    disident: {
+      label: 'Disident',
+      names: ['Pan Šafář', 'Pan Vohryzek', 'Paní Olga'],
+      flavor: [
+        '„Nic jsem nepodepsal.“',
+        '„Knihy? Jaké knihy.“',
+        '„Zeď má uši, soudruhu. I ta panelová.“',
+      ],
+    },
+    family: {
+      label: 'Rodina s dětmi',
+      names: ['Holubovi (+ 2 děti)', 'Veselí (+ 2 děti)', 'Maláčovi (+ 3 děti)'],
+      flavor: [
+        '„Děti potřebují vzduch a pískoviště.“',
+        '„Kočárek je konečně v kočárkárně.“',
+        '„Ve dvou pokojích se dá žít. Musí.“',
+      ],
+    },
+    musician: {
+      label: 'Hudebník',
+      names: ['Mistr Vašek (housle)', 'Slečna Eva (klavír)', 'Pan Bedřich (lesní roh)'],
+      flavor: [
+        '„Umění vyžaduje oběti. Hlavně od sousedů.“',
+        '„Cvičím jen do desíti. Do desíti večer.“',
+        '„Dvořák by to pochopil.“',
+      ],
+    },
   } satisfies Record<ArchetypeId, ArchetypeContent>,
 
   toasts: {
@@ -127,6 +230,21 @@ export const CS = {
     elevatorFixed: 'Výtah opraven. Drží to izolepou, ale jede.',
     leak: (flat: string) => `V bytě praskla trubka (${flat}). Instalatér má dovolenou.`,
     leakFixed: (flat: string) => `Trubka opravena (${flat}). Tentokrát snad doopravdy.`,
+    windowFixed: (flat: string) => `Okno zaskleno (${flat}). Sklenář si účtoval i cestu.`,
+    musicianMoveIn: 'Do domu se nastěhovala kultura. Reputace stoupá.',
+    disidentLoyal:
+      'Bydlí tu už půl hodiny a dům mlčí. Sousedé drží spolu. Reputace stoupá.',
+    kutilFix: (flat: string) =>
+      `Pan Jarda si všiml prasklé trubky (${flat}) a spravil ji. Neptal se.`,
+    caretakerHired:
+      'Pan Fanda nastoupil jako domovník. První věc: pověsil si síťovku v kočárkárně.',
+    caretakerFired: 'Pan Fanda skončil. Síťovku si vzal s sebou.',
+    caretakerElevator: (kcs: string) => `Pan Fanda opravil výtah (−${kcs}).`,
+    caretakerLeak: (flat: string, kcs: string) =>
+      `Pan Fanda vyměnil trubku (${flat}, −${kcs}).`,
+    caretakerWindow: (flat: string, kcs: string) =>
+      `Pan Fanda zasklil okno (${flat}, −${kcs}).`,
+    courtyardBuilt: (name: string) => `Na dvorku přibylo: ${name}.`,
   },
 
   events: {
@@ -154,6 +272,25 @@ export const CS = {
     schuzeSkip: 'Nechat být (sousedé si to zapamatují)',
     schuzePaid: 'Chlebíčky byly. Schůze proběhla v duchu vzájemného porozumění.',
     schuzeSkipped: 'Bez chlebíčků. Schůze skončila povzdechem a zápisem.',
+    kscSvazak: 'Kontrola z OV KSČ: soudruh svazák se za dům zaručil. „Vzorná práce.“',
+    stbDisidentGone: (name: string) =>
+      `${name} zmizel. V šest ráno. Nikdo nic neviděl, nikdo nic neslyšel.`,
+    stbSearch: 'Domovní prohlídka ve tři ráno. Hledali knihy. Celé patro nespalo.',
+    vrtani: (floor: number) =>
+      `Sobota, 7:00. Vrtačka pana Jardy budí ${floor}. patro. Důvod neznámý, konec v nedohlednu.`,
+    okno: (flat: string) => `Fotbal na dvorku. Míč vyhrál souboj s oknem (${flat}).`,
+    rajcata: 'Úroda ze záhonků. Rajčata dostal celý dům. I pan Lojza, i když neví proč.',
+    zlodej: 'Někdo v noci očesal záhonky. Paní Vlasta zahájila vlastní vyšetřování.',
+    trabant:
+      'Před vchodem už týden parkuje cizí trabant. Nikdo neví čí. Nikdo se nepřizná.',
+    azorTitle: 'Azor se ztratil',
+    azorBody:
+      'Paní Vlasta stojí přede dveřmi a mlčí. Azor je pryč. Dům má příležitost projevit charakter.',
+    azorSearch: (kcs: string) => `Uspořádat pátrání (${kcs})`,
+    azorSkip: 'Nechat to být (vrátí se sám… asi)',
+    azorFound: 'Azor nalezen v kotelně. Spal. Paní Vlasta děkuje celému domu.',
+    azorReturned:
+      'Azor se vrátil sám. Po dvou dnech. Páchne uhlím a nikdo neví proč.',
   },
 
   milestones: {
@@ -221,4 +358,9 @@ export const ARCHETYPE_EMOJI: Record<ArchetypeId, string> = {
   drunk: '🥴',
   vekslak: '🕶️',
   shift: '👷‍♀️',
+  kutil: '🔧',
+  svazak: '📋',
+  disident: '📚',
+  family: '👪',
+  musician: '🎻',
 };

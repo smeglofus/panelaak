@@ -4,7 +4,8 @@
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import { ARCHETYPES } from '../game/tenants';
-import { formatKcs, formatKcsPerSec, LEAK_REPAIR_COST, tenantRentPerSec } from '../game/economy';
+import { flatRentPerSec, formatKcs, formatKcsPerSec, PROBLEM_DEFS } from '../game/economy';
+import { happinessFactors } from '../game/tick';
 import { useGame } from '../game/store';
 
 interface Props {
@@ -13,9 +14,11 @@ interface Props {
 }
 
 export default function TenantCard({ flat, onClose }: Props) {
-  const money = useGame((s) => s.game.money);
-  const repairLeak = useGame((s) => s.repairLeak);
+  const game = useGame((s) => s.game);
+  const money = game.money;
+  const repairProblem = useGame((s) => s.repairProblem);
   const t = flat.tenant;
+  const factors = t ? happinessFactors(game, flat) : [];
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
   return (
@@ -44,18 +47,32 @@ export default function TenantCard({ flat, onClose }: Props) {
           </div>
           <div className="card-row">
             <span>{CS.ui.rent}</span>
-            <span className="card-num">{formatKcsPerSec(tenantRentPerSec(t))}</span>
+            <span className="card-num">{formatKcsPerSec(flatRentPerSec(game, flat))}</span>
           </div>
           <div className="card-quirk">{ARCHETYPES[t.archetype].quirk}</div>
+          {factors.length > 0 && (
+            <div className="card-factors">
+              <span className="factors-title">{CS.ui.influences}</span>
+              <ul>
+                {factors.map((f) => (
+                  <li key={f.label} className={f.delta >= 0 ? 'factor-good' : 'factor-bad'}>
+                    {f.delta >= 0 ? '+' : '−'}
+                    {Math.abs(f.delta)} {f.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="card-flavor">{t.flavor}</p>
-          {flat.problem === 'leak' && (
+          {flat.problem && (
             <button
               type="button"
               className="btn btn-repair"
-              disabled={money < LEAK_REPAIR_COST}
-              onClick={() => repairLeak(flat.index)}
+              disabled={money < PROBLEM_DEFS[flat.problem].repairCost}
+              onClick={() => repairProblem(flat.index)}
             >
-              💧 {CS.ui.repairLeak} · {formatKcs(LEAK_REPAIR_COST)}
+              {flat.problem === 'leak' ? '💧' : '⚽'} {CS.problems[flat.problem].repair} ·{' '}
+              {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
             </button>
           )}
         </>

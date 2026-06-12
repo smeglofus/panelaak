@@ -8,6 +8,7 @@ import OfflineModal from './components/OfflineModal';
 import ChoiceModal from './components/ChoiceModal';
 import TenantCard from './components/TenantCard';
 import HelpModal from './components/HelpModal';
+import Courtyard from './components/Courtyard';
 
 export default function App() {
   const game = useGame((s) => s.game);
@@ -61,6 +62,7 @@ export default function App() {
               selected={selectedFlat}
               onSelectFlat={(i) => setSelectedFlat((cur) => (cur === i ? null : i))}
             />
+            <Courtyard game={game} />
           </div>
           <div className="scene-ground" />
           {flat && <TenantCard flat={flat} onClose={() => setSelectedFlat(null)} />}

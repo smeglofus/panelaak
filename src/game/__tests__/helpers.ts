@@ -30,6 +30,8 @@ export function makeTenant(overrides: Partial<Tenant> & { archetype?: ArchetypeI
     flavor: '„Testuju.“',
     happiness: 70,
     unhappySince: null,
+    movedInAt: 0,
+    quirkDone: false,
     ...overrides,
   };
 }

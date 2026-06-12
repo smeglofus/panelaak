@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { eligibleEvents, EVENTS, processEvents, resolveSchuze } from '../events';
+import { eligibleEvents, EVENTS, processEvents, resolveChoice } from '../events';
 import { createRng } from '../rng';
-import { SCHUZE_COST } from '../economy';
+import { AZOR_SEARCH_COST, SCHUZE_COST } from '../economy';
 import { freshState, withFloors, withTenant } from './helpers';
 
 const def = (id: string) => EVENTS.find((e) => e.id === id)!;
@@ -60,10 +60,13 @@ describe('kontrola z OV KSČ', () => {
 
 describe('návštěva StB', () => {
   // The 50/50 branch comes from the rng — scan for a seed per branch.
+  // The first draw picks the suspect flat, the second decides the outcome.
   let seedGone = -1;
   let seedFee = -1;
   for (let i = 1; i < 100 && (seedGone < 0 || seedFee < 0); i++) {
-    if (createRng(i).next() < 0.5) {
+    const r = createRng(i);
+    r.next(); // suspect pick
+    if (r.next() < 0.5) {
       if (seedGone < 0) seedGone = i;
     } else if (seedFee < 0) {
       seedFee = i;
@@ -125,7 +128,7 @@ describe('domovní schůze', () => {
   it('paying for chlebíčky costs 50 Kčs and lifts happiness', () => {
     let s = def('schuze').apply({ ...freshState(), money: 500 }, createRng(1));
     const before = s.buildings[0].flats[0].tenant!.happiness;
-    s = resolveSchuze(s, 'pay');
+    s = resolveChoice(s, 'pay');
     expect(s.pendingChoice).toBeNull();
     expect(s.money).toBe(500 - SCHUZE_COST);
     expect(s.buildings[0].flats[0].tenant!.happiness).toBeGreaterThan(before);
@@ -134,7 +137,7 @@ describe('domovní schůze', () => {
   it('skipping is free but the neighbours remember', () => {
     let s = def('schuze').apply({ ...freshState(), money: 500 }, createRng(1));
     const before = s.buildings[0].flats[0].tenant!.happiness;
-    s = resolveSchuze(s, 'skip');
+    s = resolveChoice(s, 'skip');
     expect(s.money).toBe(500);
     expect(s.buildings[0].flats[0].tenant!.happiness).toBeLessThan(before);
   });
@@ -166,6 +169,54 @@ describe('jitrnice', () => {
     const before = s.buildings[0].flats[0].tenant!.happiness;
     const next = def('jitrnice').apply(s, createRng(1));
     expect(next.buildings[0].flats[0].tenant!.happiness).toBeGreaterThan(before);
+  });
+});
+
+describe('svazák a StB (v0.2 archetypes)', () => {
+  it('KSČ control always praises when a svazák lives in the house', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'svazak', happiness: 5 }); // terrible shape
+    s = { ...s, money: 500 };
+    const next = def('kscControl').apply(s, createRng(1));
+    expect(next.money).toBe(500); // no fine
+    expect(next.reputation).toBeGreaterThan(s.reputation);
+  });
+
+  it('a disident makes the StB visit possible', () => {
+    const s = withTenant(freshState(), 1, { archetype: 'disident' });
+    expect(eligibleEvents(s).map((e) => e.id)).toContain('stbVisit');
+  });
+});
+
+describe('dvorek events', () => {
+  it('okno requires the sandbox and breaks a window', () => {
+    let s = withTenant(freshState(), 1, { happiness: 70 });
+    expect(eligibleEvents(s).map((e) => e.id)).not.toContain('okno');
+    s = { ...s, courtyard: { ...s.courtyard, piskoviste: true } };
+    expect(eligibleEvents(s).map((e) => e.id)).toContain('okno');
+    const next = def('okno').apply(s, createRng(1));
+    expect(next.buildings[0].flats.some((f) => f.problem === 'window')).toBe(true);
+  });
+
+  it('trabant stops appearing once the garage is built', () => {
+    let s = withFloors(freshState(), 2);
+    expect(eligibleEvents(s).map((e) => e.id)).toContain('trabant');
+    s = { ...s, courtyard: { ...s.courtyard, garaz: true } };
+    expect(eligibleEvents(s).map((e) => e.id)).not.toContain('trabant');
+  });
+
+  it('Azor: paying for the search lifts the house, ignoring it hurts pensioners', () => {
+    const base = withTenant(freshState(), 1, { archetype: 'pensioner', happiness: 60 });
+    const s = def('azor').apply({ ...base, money: 500 }, createRng(1));
+    expect(s.pendingChoice?.eventId).toBe('azor');
+
+    const found = resolveChoice(s, 'search');
+    expect(found.money).toBe(500 - AZOR_SEARCH_COST);
+    expect(found.buildings[0].flats[1].tenant!.happiness).toBeGreaterThan(60);
+
+    const ignored = resolveChoice(s, 'skip');
+    expect(ignored.money).toBe(500);
+    expect(ignored.buildings[0].flats[1].tenant!.happiness).toBeLessThan(60);
   });
 });
 

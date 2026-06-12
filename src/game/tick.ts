@@ -15,12 +15,16 @@ import {
   mainBuilding,
   mapTenants,
   occupiedCount,
+  updateFlat,
 } from './state';
 import {
   BRIGADE_ENERGY_MAX,
   BRIGADE_ENERGY_REGEN,
-  CELLAR_RENT_MULT,
+  CARETAKER_FIX_CHANCE,
+  CARETAKER_WAGE_PER_SEC,
   COUPLE_ELEVATOR_EXTRA_PENALTY,
+  DISIDENT_LOYALTY_REP,
+  DISIDENT_LOYALTY_SECONDS,
   EARLY_MOVE_IN_BOOST,
   EARLY_MOVE_IN_MAX_OCCUPIED,
   ELEVATOR_BREAK_CHANCE,
@@ -28,54 +32,108 @@ import {
   ELEVATOR_DECAY_MULT,
   ELEVATOR_MIN_FLOORS,
   ELEVATOR_NDR_BREAK_MULT,
+  elevatorRepairCost,
+  FAMILY_HOT_WATER_EXTRA,
   FLATS_PER_FLOOR,
   formatKcs,
   HAPPINESS_BASE_TARGET,
   HAPPINESS_DRIFT_RATE,
   HOT_WATER_TARGET_PENALTY,
+  incomePerSec,
+  KUTIL_FIX_CHANCE,
   LAUNDRY_REGEN_MULT,
+  LAVICKY_PENSIONER_BONUS,
   LEAK_CHANCE,
-  LEAK_TARGET_PENALTY,
   MAX_FLOORS,
   MILESTONE_REWARDS,
   MOVE_OUT_GRACE_SECONDS,
   MOVE_OUT_HAPPINESS_THRESHOLD,
   moveInChance,
+  MUSICIAN_MOVE_IN_REP,
+  MUSICIAN_NEIGHBOR_DRAG,
   PENSIONER_NEIGHBOR_DRAG,
+  PISKOVISTE_FAMILY_BONUS,
+  PROBLEM_DEFS,
   REP_MILESTONE,
   REP_MOVE_IN,
   REP_MOVE_OUT,
   SATELLITE_TARGET_BONUS,
+  SUSAK_TARGET_BONUS,
+  SVAZAK_NEIGHBOR_DRAG,
   TENANT_STARTING_HAPPINESS,
-  tenantRentPerSec,
   VZORNY_DUM_HAPPINESS,
+  ZAHONKY_TARGET_BONUS,
 } from './economy';
 
-/** The happiness level a tenant drifts toward, derived from building condition. */
-export function happinessTarget(s: GameState, flat: Flat): number {
-  const b = mainBuilding(s);
-  let target = HAPPINESS_BASE_TARGET;
+export interface HappinessFactor {
+  label: string;
+  delta: number;
+}
 
-  if (s.upgrades.satellite) target += SATELLITE_TARGET_BONUS;
-  if (isEventActive(s, 'hotWater')) target -= HOT_WATER_TARGET_PENALTY;
-  if (flat.problem === 'leak') target -= LEAK_TARGET_PENALTY;
-
-  if (b.elevatorBroken && flat.floor >= ELEVATOR_MIN_FLOORS) {
-    target -= ELEVATOR_BROKEN_TARGET_PENALTY;
-    if (flat.tenant?.archetype === 'couple') target -= COUPLE_ELEVATOR_EXTRA_PENALTY;
-  }
-
-  const pensionerNextDoor = b.flats.some(
+function hasNeighbor(s: GameState, flat: Flat, archetype: string): boolean {
+  return mainBuilding(s).flats.some(
     (f) =>
       f.index !== flat.index &&
       f.floor === flat.floor &&
-      f.tenant?.archetype === 'pensioner',
+      f.tenant?.archetype === archetype,
   );
-  if (pensionerNextDoor && flat.tenant?.archetype !== 'pensioner') {
-    target -= PENSIONER_NEIGHBOR_DRAG;
+}
+
+/**
+ * Everything that pushes a tenant's mood up or down, as labelled deltas —
+ * the same list drives the simulation and the tenant-card diagnostics.
+ */
+export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
+  const b = mainBuilding(s);
+  const t = flat.tenant;
+  const factors: HappinessFactor[] = [];
+  const F = CS.factors;
+
+  if (s.upgrades.satellite) factors.push({ label: F.satellite, delta: SATELLITE_TARGET_BONUS });
+  if (s.courtyard.zahonky) factors.push({ label: F.zahonky, delta: ZAHONKY_TARGET_BONUS });
+  if (s.courtyard.susak) factors.push({ label: F.susak, delta: SUSAK_TARGET_BONUS });
+  if (s.courtyard.piskoviste && t?.archetype === 'family') {
+    factors.push({ label: F.piskoviste, delta: PISKOVISTE_FAMILY_BONUS });
+  }
+  if (s.courtyard.lavicky && t?.archetype === 'pensioner') {
+    factors.push({ label: F.lavicky, delta: LAVICKY_PENSIONER_BONUS });
   }
 
-  return clamp(target, 0, 100);
+  if (isEventActive(s, 'hotWater')) {
+    factors.push({ label: F.hotWater, delta: -HOT_WATER_TARGET_PENALTY });
+    if (t?.archetype === 'family') {
+      factors.push({ label: F.hotWaterFamily, delta: -FAMILY_HOT_WATER_EXTRA });
+    }
+  }
+
+  if (flat.problem) {
+    factors.push({ label: F[flat.problem], delta: -PROBLEM_DEFS[flat.problem].targetPenalty });
+  }
+
+  if (b.elevatorBroken && flat.floor >= ELEVATOR_MIN_FLOORS) {
+    factors.push({ label: F.elevator, delta: -ELEVATOR_BROKEN_TARGET_PENALTY });
+    if (t?.archetype === 'couple') {
+      factors.push({ label: F.elevatorCouple, delta: -COUPLE_ELEVATOR_EXTRA_PENALTY });
+    }
+  }
+
+  if (t?.archetype !== 'pensioner' && hasNeighbor(s, flat, 'pensioner')) {
+    factors.push({ label: F.pensionerDrag, delta: -PENSIONER_NEIGHBOR_DRAG });
+  }
+  if (t?.archetype !== 'svazak' && hasNeighbor(s, flat, 'svazak')) {
+    factors.push({ label: F.svazakDrag, delta: -SVAZAK_NEIGHBOR_DRAG });
+  }
+  if (t?.archetype !== 'musician' && hasNeighbor(s, flat, 'musician')) {
+    factors.push({ label: F.musicianDrag, delta: -MUSICIAN_NEIGHBOR_DRAG });
+  }
+
+  return factors;
+}
+
+/** The happiness level a tenant drifts toward, derived from building condition. */
+export function happinessTarget(s: GameState, flat: Flat): number {
+  const sum = happinessFactors(s, flat).reduce((acc, f) => acc + f.delta, 0);
+  return clamp(HAPPINESS_BASE_TARGET + sum, 0, 100);
 }
 
 function updateHappiness(s: GameState): GameState {
@@ -98,12 +156,7 @@ function updateHappiness(s: GameState): GameState {
 }
 
 function collectRent(s: GameState): GameState {
-  const mult = s.upgrades.cellar ? CELLAR_RENT_MULT : 1;
-  let income = 0;
-  for (const flat of mainBuilding(s).flats) {
-    if (flat.tenant) income += tenantRentPerSec(flat.tenant);
-  }
-  income *= mult;
+  const income = incomePerSec(s);
   return { ...s, money: s.money + income, totalEarned: s.totalEarned + income };
 }
 
@@ -132,7 +185,7 @@ function processMoveIns(s: GameState, rng: Rng): GameState {
     const earlyBoost =
       occupiedCount(s) < EARLY_MOVE_IN_MAX_OCCUPIED ? EARLY_MOVE_IN_BOOST : 1;
     if (!rng.chance(moveInChance(s.reputation) * earlyBoost)) continue;
-    const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS);
+    const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS, s.tick);
     const b = mainBuilding(s);
     const flats = b.flats.map((f) => (f.index === flat.index ? { ...f, tenant } : f));
     s = {
@@ -143,6 +196,13 @@ function processMoveIns(s: GameState, rng: Rng): GameState {
       stats: { ...s.stats, moveIns: s.stats.moveIns + 1 },
     };
     s = addLog(s, 'good', CS.toasts.moveIn(tenant.name, CS.ui.flatLabel(flat.index + 1)));
+    if (tenant.archetype === 'musician') {
+      s = {
+        ...s,
+        reputation: clamp(s.reputation + MUSICIAN_MOVE_IN_REP, 0, 100),
+      };
+      s = addLog(s, 'good', CS.toasts.musicianMoveIn);
+    }
   }
   return s;
 }
@@ -166,17 +226,82 @@ function processBreakdowns(s: GameState, rng: Rng): GameState {
     const candidates = mainBuilding(s).flats.filter((f) => f.tenant && !f.problem);
     if (candidates.length > 0) {
       const target = rng.pick(candidates);
-      const b2 = mainBuilding(s);
-      const flats = b2.flats.map((f) =>
-        f.index === target.index ? { ...f, problem: 'leak' as const } : f,
-      );
+      s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'leak' as const }));
       s = {
         ...s,
-        buildings: [{ ...b2, flats }],
         stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 },
       };
       s = addLog(s, 'bad', CS.toasts.leak(CS.ui.flatLabel(target.index + 1)));
     }
+  }
+
+  return s;
+}
+
+/** Archetype one-offs and passives that run on the clock. */
+function processQuirks(s: GameState, rng: Rng): GameState {
+  // Kutil quietly fixes a leak now and then.
+  const hasKutil = mainBuilding(s).flats.some((f) => f.tenant?.archetype === 'kutil');
+  if (hasKutil && rng.chance(KUTIL_FIX_CHANCE)) {
+    const leaky = mainBuilding(s).flats.filter((f) => f.problem === 'leak');
+    if (leaky.length > 0) {
+      const target = rng.pick(leaky);
+      s = updateFlat(s, target.index, (f) => ({ ...f, problem: null }));
+      s = addLog(s, 'good', CS.toasts.kutilFix(CS.ui.flatLabel(target.index + 1)));
+    }
+  }
+
+  // Disident who survives long enough proves the house holds together.
+  for (const flat of mainBuilding(s).flats) {
+    const t = flat.tenant;
+    if (
+      t?.archetype === 'disident' &&
+      !t.quirkDone &&
+      s.tick - t.movedInAt >= DISIDENT_LOYALTY_SECONDS
+    ) {
+      s = updateFlat(s, flat.index, (f) => ({
+        ...f,
+        tenant: { ...f.tenant!, quirkDone: true },
+      }));
+      s = { ...s, reputation: clamp(s.reputation + DISIDENT_LOYALTY_REP, 0, 100) };
+      s = addLog(s, 'good', CS.toasts.disidentLoyal);
+    }
+  }
+
+  return s;
+}
+
+/** Pan Fanda: takes a wage, fixes what is broken — eventually, if funds allow. */
+function processCaretaker(s: GameState, rng: Rng): GameState {
+  if (!s.caretakerHired) return s;
+
+  s = { ...s, money: Math.max(0, s.money - CARETAKER_WAGE_PER_SEC) };
+
+  const b = mainBuilding(s);
+  if (b.elevatorBroken) {
+    const cost = elevatorRepairCost(b.floors);
+    if (s.money >= cost && rng.chance(CARETAKER_FIX_CHANCE)) {
+      s = {
+        ...s,
+        money: s.money - cost,
+        buildings: [{ ...mainBuilding(s), elevatorBroken: false }],
+      };
+      s = addLog(s, 'good', CS.toasts.caretakerElevator(formatKcs(cost)));
+    }
+  }
+
+  for (const flat of mainBuilding(s).flats) {
+    if (!flat.problem) continue;
+    const cost = PROBLEM_DEFS[flat.problem].repairCost;
+    if (s.money < cost || !rng.chance(CARETAKER_FIX_CHANCE)) continue;
+    const label = CS.ui.flatLabel(flat.index + 1);
+    const text =
+      flat.problem === 'leak'
+        ? CS.toasts.caretakerLeak(label, formatKcs(cost))
+        : CS.toasts.caretakerWindow(label, formatKcs(cost));
+    s = { ...s, money: s.money - cost };
+    s = updateFlat(s, flat.index, (f) => ({ ...f, problem: null }));
+    s = addLog(s, 'good', text);
   }
 
   return s;
@@ -247,6 +372,8 @@ export function tick(prev: GameState): GameState {
   s = processMoveOuts(s);
   s = processMoveIns(s, rng);
   s = processBreakdowns(s, rng);
+  s = processQuirks(s, rng);
+  s = processCaretaker(s, rng);
   s = processEvents(s, rng);
   s = checkMilestones(s);
 

@@ -1,10 +1,22 @@
 // All game state interfaces. The whole game is a pure function over GameState.
 
-export type ArchetypeId = 'pensioner' | 'couple' | 'drunk' | 'vekslak' | 'shift';
+export type ArchetypeId =
+  | 'pensioner'
+  | 'couple'
+  | 'drunk'
+  | 'vekslak'
+  | 'shift'
+  | 'kutil'
+  | 'svazak'
+  | 'disident'
+  | 'family'
+  | 'musician';
 
 export type UpgradeId = 'elevatorNdr' | 'cellar' | 'satellite' | 'laundry';
 
-export type ProblemId = 'leak';
+export type CourtyardId = 'piskoviste' | 'lavicky' | 'zahonky' | 'susak' | 'garaz';
+
+export type ProblemId = 'leak' | 'window';
 
 export type MilestoneId =
   | 'firstFullFloor'
@@ -22,6 +34,10 @@ export interface Tenant {
   happiness: number;
   /** Game tick when happiness dropped below the move-out threshold, null when above it. */
   unhappySince: number | null;
+  /** Game tick of the move-in — some quirks (disident loyalty) depend on tenure. */
+  movedInAt: number;
+  /** One-shot quirk already fired (e.g. the disident loyalty bonus). */
+  quirkDone: boolean;
 }
 
 export interface Flat {
@@ -91,6 +107,10 @@ export interface GameState {
   buildings: Building[];
   meta: { prestigeLevel: number };
   upgrades: Record<UpgradeId, boolean>;
+  /** Courtyard buildables — rendered in the scene, unlock their own events. */
+  courtyard: Record<CourtyardId, boolean>;
+  /** Pan Fanda: auto-repairs paid from the fund, for a wage. */
+  caretakerHired: boolean;
   activeEvents: ActiveEvent[];
   /** Set while an interactive event (domovní schůze) waits for the player; tick pauses. */
   pendingChoice: PendingChoice | null;

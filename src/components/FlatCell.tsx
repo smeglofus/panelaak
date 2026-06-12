@@ -53,7 +53,9 @@ export default function FlatCell({ flat, selected, onSelect }: Props) {
       <span className={`window window-${tier}`}>
         {t && <span className="tenant-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>}
       </span>
-      {flat.problem === 'leak' && <span className="problem-icon">💧</span>}
+      {flat.problem && (
+        <span className="problem-icon">{flat.problem === 'leak' ? '💧' : '⚽'}</span>
+      )}
       <span className="balcony" />
     </button>
   );

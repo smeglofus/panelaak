@@ -1,18 +1,21 @@
 // The "domovní správa" notice board: money, stats, contextual repairs,
 // upgrades, milestones, new game.
 
-import type { MilestoneId, UpgradeId } from '../game/types';
+import type { CourtyardId, MilestoneId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { avgHappiness, occupiedCount } from '../game/state';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
+  CARETAKER_MIN_FLOORS,
+  CARETAKER_WAGE_PER_SEC,
+  COURTYARD_COSTS,
   elevatorRepairCost,
   formatKcs,
   formatKcsPerSec,
   incomePerSec,
-  LEAK_REPAIR_COST,
+  PROBLEM_DEFS,
   UPGRADE_COSTS,
 } from '../game/economy';
 
@@ -20,12 +23,16 @@ export default function SidePanel() {
   const game = useGame((s) => s.game);
   const buyUpgrade = useGame((s) => s.buyUpgrade);
   const repairElevator = useGame((s) => s.repairElevator);
-  const repairLeak = useGame((s) => s.repairLeak);
+  const repairProblem = useGame((s) => s.repairProblem);
   const workBrigade = useGame((s) => s.workBrigade);
+  const buyCourtyard = useGame((s) => s.buyCourtyard);
+  const hireCaretaker = useGame((s) => s.hireCaretaker);
+  const fireCaretaker = useGame((s) => s.fireCaretaker);
   const newGame = useGame((s) => s.newGame);
 
   const b = game.buildings[0];
-  const leaks = b.flats.filter((f) => f.problem === 'leak');
+  const problems = b.flats.filter((f) => f.problem);
+  const anythingBroken = b.elevatorBroken || problems.length > 0;
   const elevCost = elevatorRepairCost(b.floors);
 
   return (
@@ -72,7 +79,7 @@ export default function SidePanel() {
         <p className="brigade-hint">{CS.ui.brigadeHint}</p>
       </section>
 
-      {(b.elevatorBroken || leaks.length > 0) && (
+      {(b.elevatorBroken || problems.length > 0) && (
         <section className="panel-section panel-alert">
           <h3>{CS.ui.repairs}</h3>
           {b.elevatorBroken && (
@@ -85,17 +92,39 @@ export default function SidePanel() {
               ⚠️ {CS.ui.repairElevator} · {formatKcs(elevCost)}
             </button>
           )}
-          {leaks.map((f) => (
+          {problems.map((f) => (
             <button
               type="button"
               key={f.index}
               className="btn btn-repair"
-              disabled={game.money < LEAK_REPAIR_COST}
-              onClick={() => repairLeak(f.index)}
+              disabled={game.money < PROBLEM_DEFS[f.problem!].repairCost}
+              onClick={() => repairProblem(f.index)}
             >
-              {CS.ui.leakInFlat(CS.ui.flatLabel(f.index + 1))} · {formatKcs(LEAK_REPAIR_COST)}
+              {CS.problems[f.problem!].list(CS.ui.flatLabel(f.index + 1))} ·{' '}
+              {formatKcs(PROBLEM_DEFS[f.problem!].repairCost)}
             </button>
           ))}
+        </section>
+      )}
+
+      {b.floors >= CARETAKER_MIN_FLOORS && (
+        <section className="panel-section">
+          <h3>{CS.ui.domovnik}</h3>
+          {game.caretakerHired ? (
+            <div className="caretaker-row">
+              <span className="caretaker-status">
+                {anythingBroken ? CS.ui.caretakerOnDuty : CS.ui.caretakerIdle}
+              </span>
+              <button type="button" className="btn btn-small" onClick={fireCaretaker}>
+                {CS.ui.fireCaretaker}
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-brigade" onClick={hireCaretaker}>
+              🧹 {CS.ui.hireCaretaker(formatKcsPerSec(CARETAKER_WAGE_PER_SEC))}
+            </button>
+          )}
+          <p className="brigade-hint">{CS.ui.caretakerHint}</p>
         </section>
       )}
 
@@ -118,6 +147,34 @@ export default function SidePanel() {
                   className="btn"
                   disabled={game.money < cost}
                   onClick={() => buyUpgrade(id)}
+                >
+                  {formatKcs(cost)}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="panel-section">
+        <h3>{CS.ui.dvorek}</h3>
+        {(Object.keys(COURTYARD_COSTS) as CourtyardId[]).map((id) => {
+          const owned = game.courtyard[id];
+          const cost = COURTYARD_COSTS[id];
+          return (
+            <div key={id} className={`upgrade${owned ? ' upgrade-owned' : ''}`}>
+              <div className="upgrade-text">
+                <strong>{CS.courtyard[id].name}</strong>
+                <span>{CS.courtyard[id].desc}</span>
+              </div>
+              {owned ? (
+                <span className="owned-mark">{CS.ui.owned}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={game.money < cost}
+                  onClick={() => buyCourtyard(id)}
                 >
                   {formatKcs(cost)}
                 </button>
