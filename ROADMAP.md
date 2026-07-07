@@ -34,10 +34,17 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   barevná televize, západoněmecká pračka, digitálky pro domovníka, káva
   na schůzi (opakovatelná)
 
-## v0.4 „Privatizace 1991“ (prestiž)
+## v0.4 „Privatizace“ *(hotovo)*
 
-- Reset hry → **privatizační kupóny** → trvalé bonusy (levnější beton, konexe…)
-- **Kádrový posudek** — achievementy přežívající prestiž („Úderník“, „Přežil 5× StB“…)
+- Start hry posunut na 1. dubna 1988; od **1. ledna 1990** lze dům zprivatizovat:
+  reset s **kupóny** (z celoživotního výdělku + titul), každá éra +5 % nájemného
+- **Trvalé výhody za kupóny**: lepší beton, konexe na výboru, rodinné stříbro,
+  pověst dobrého správce, zlaté ručičky
+- **Modernizace** — nekonečně opakovatelná vylepšení (renovace jader +5 % nájmu
+  za úroveň, lepší nářadí do Akce Z) = trvalý smysl peněz
+- Frontend: dvorek přesunut do trávníku před domem (vždy v záběru),
+  responzivní breakpointy pro tablet i telefon
+- *(odloženo do v0.5)* Kádrový posudek — achievementy přežívající prestiž
 
 ## v0.5 „Sídliště“
 

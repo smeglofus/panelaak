@@ -6,6 +6,7 @@ import type {
   Flat,
   GameState,
   LogKind,
+  Meta,
   Tenant,
 } from './types';
 import { createRng } from './rng';
@@ -14,12 +15,22 @@ import {
   BRIGADE_ENERGY_COST,
   BRIGADE_ENERGY_MAX,
   brigadeReward,
+  POVEST_START_REP,
   STARTING_MONEY,
   STARTING_REPUTATION,
+  STRIBRO_START_MONEY,
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
+
+export function createDefaultMeta(): Meta {
+  return {
+    prestigeLevel: 0,
+    kupony: 0,
+    perks: { beton: 0, konexe: 0, stribro: 0, povest: 0, rucicky: 0 },
+  };
+}
 
 const LOG_CAP = 50;
 
@@ -27,9 +38,10 @@ export function createFlat(index: number, floor: number): Flat {
   return { index, floor, tenant: null, problem: null };
 }
 
-export function createInitialState(seed?: number): GameState {
+export function createInitialState(seed?: number, meta?: Meta): GameState {
   const rngSeed = (seed ?? (Date.now() ^ Math.floor(Math.random() * 0xffffffff))) >>> 0;
   const rng = createRng(rngSeed);
+  const m = meta ?? createDefaultMeta();
 
   // Start with one floor, two flats, and one reliable tenant already home —
   // the game must feel alive within the first minute (spec §2).
@@ -42,13 +54,15 @@ export function createInitialState(seed?: number): GameState {
     version: SAVE_VERSION,
     tick: 0,
     rngSeed: rng.state(),
-    money: STARTING_MONEY,
+    // Rodinné stříbro and pověst perks improve every new start.
+    money: STARTING_MONEY + STRIBRO_START_MONEY * m.perks.stribro,
     totalEarned: 0,
-    reputation: STARTING_REPUTATION,
+    reputation: Math.min(100, STARTING_REPUTATION + POVEST_START_REP * m.perks.povest),
     energy: BRIGADE_ENERGY_MAX,
     buildings: [building],
-    meta: { prestigeLevel: 0 },
+    meta: m,
     upgrades: { elevatorNdr: false, cellar: false, satellite: false, laundry: false },
+    repeatables: { renovace: 0, naradi: 0 },
     courtyard: { piskoviste: false, lavicky: false, zahonky: false, susak: false, garaz: false },
     caretakerHired: false,
     bony: 0,
@@ -133,7 +147,11 @@ export function vacateFlat(s: GameState, index: number): GameState {
  */
 export function applyBrigadeWork(s: GameState): GameState {
   if (s.energy < BRIGADE_ENERGY_COST) return s;
-  const reward = brigadeReward(mainBuilding(s).floors);
+  const reward = brigadeReward(
+    mainBuilding(s).floors,
+    s.repeatables.naradi,
+    s.meta.perks.rucicky,
+  );
   return {
     ...s,
     energy: s.energy - BRIGADE_ENERGY_COST,
@@ -188,6 +206,18 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
             : f,
         ),
       })),
+    };
+  }
+  if (fromVersion < 5) {
+    // v5 added the privatizace era: meta perks/kupóny and repeatable upgrades.
+    g = {
+      ...g,
+      version: 5,
+      meta: {
+        ...createDefaultMeta(),
+        prestigeLevel: g.meta?.prestigeLevel ?? 0,
+      },
+      repeatables: { renovace: 0, naradi: 0 },
     };
   }
   return g;

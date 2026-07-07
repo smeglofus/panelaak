@@ -1,11 +1,12 @@
 // The "domovní správa" notice board: money, stats, contextual repairs,
 // upgrades, milestones, new game.
 
-import type { CourtyardId, MilestoneId, TuzexId, UpgradeId } from '../game/types';
+import type { CourtyardId, MilestoneId, PerkId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { avgHappiness, occupiedCount } from '../game/state';
 import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
+import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
@@ -18,7 +19,10 @@ import {
   HEATING_COST_PER_FLOOR,
   incomePerSec,
   KAVA_COST_BONY,
+  PERK_COSTS,
+  PERK_MAX,
   PROBLEM_DEFS,
+  repeatableCost,
   TUZEX_COSTS,
   UPGRADE_COSTS,
 } from '../game/economy';
@@ -32,6 +36,9 @@ export default function SidePanel() {
   const buyCourtyard = useGame((s) => s.buyCourtyard);
   const buyTuzex = useGame((s) => s.buyTuzex);
   const buyKava = useGame((s) => s.buyKava);
+  const buyRepeatable = useGame((s) => s.buyRepeatable);
+  const buyPrestigePerk = useGame((s) => s.buyPrestigePerk);
+  const privatize = useGame((s) => s.privatize);
   const hireCaretaker = useGame((s) => s.hireCaretaker);
   const fireCaretaker = useGame((s) => s.fireCaretaker);
   const newGame = useGame((s) => s.newGame);
@@ -209,6 +216,33 @@ export default function SidePanel() {
       </section>
 
       <section className="panel-section">
+        <h3>{CS.ui.modernizace}</h3>
+        {(Object.keys(CS.repeatables) as RepeatableId[]).map((id) => {
+          const level = game.repeatables[id];
+          const cost = repeatableCost(id, level);
+          return (
+            <div key={id} className="upgrade">
+              <div className="upgrade-text">
+                <strong>
+                  {CS.repeatables[id].name}
+                  {level > 0 && <span className="level-badge"> {CS.prestige.level(level)}</span>}
+                </strong>
+                <span>{CS.repeatables[id].desc}</span>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                disabled={game.money < cost}
+                onClick={() => buyRepeatable(id)}
+              >
+                {formatKcs(cost)}
+              </button>
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="panel-section">
         <h3>{CS.ui.tuzex}</h3>
         {(Object.keys(TUZEX_COSTS) as TuzexId[]).map((id) => {
           const owned = game.tuzex[id];
@@ -251,6 +285,68 @@ export default function SidePanel() {
         </div>
         <p className="brigade-hint">{CS.ui.tuzexHint}</p>
       </section>
+
+      {(privatizaceRumoured(game) || game.meta.prestigeLevel > 0 || game.meta.kupony > 0) && (
+        <section className="panel-section panel-prestige">
+          <h3>
+            {CS.prestige.title}
+            {game.meta.prestigeLevel > 0 && ` · ${CS.prestige.era(game.meta.prestigeLevel + 1)}`}
+          </h3>
+          {privatizaceAvailable(game) ? (
+            <>
+              <p className="prestige-info">{CS.prestige.available}</p>
+              <button
+                type="button"
+                className="btn btn-prestige"
+                onClick={() => {
+                  if (window.confirm(CS.prestige.confirm)) privatize();
+                }}
+              >
+                🏛️ {CS.prestige.button} · {CS.prestige.projected(computeKupony(game))}
+              </button>
+            </>
+          ) : (
+            game.meta.prestigeLevel === 0 && <p className="prestige-info">{CS.prestige.rumour}</p>
+          )}
+          {(game.meta.prestigeLevel > 0 || game.meta.kupony > 0) && (
+            <>
+              <p className="prestige-kupony">
+                ✂️ {CS.prestige.kupony(game.meta.kupony)}
+              </p>
+              <h4 className="perks-title">{CS.prestige.perksTitle}</h4>
+              {(Object.keys(CS.perks) as PerkId[]).map((id) => {
+                const level = game.meta.perks[id];
+                const maxed = level >= PERK_MAX[id];
+                return (
+                  <div key={id} className="upgrade">
+                    <div className="upgrade-text">
+                      <strong>
+                        {CS.perks[id].name}
+                        {level > 0 && (
+                          <span className="level-badge"> {CS.prestige.level(level)}</span>
+                        )}
+                      </strong>
+                      <span>{CS.perks[id].desc}</span>
+                    </div>
+                    {maxed ? (
+                      <span className="owned-mark">{CS.prestige.maxed}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-bony"
+                        disabled={game.meta.kupony < PERK_COSTS[id]}
+                        onClick={() => buyPrestigePerk(id)}
+                      >
+                        ✂️ {PERK_COSTS[id]}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </section>
+      )}
 
       <section className="panel-section">
         <h3>{CS.ui.milestones}</h3>

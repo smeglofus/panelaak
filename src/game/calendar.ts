@@ -1,13 +1,13 @@
 // Game calendar: pure functions over the tick counter. The game starts on
-// 1. dubna 1983; a 360-day year (12 × 30 days) takes 3 real hours of play.
+// 1. dubna 1988; a 360-day year (12 × 30 days) takes 3 real hours of play.
 // Winter brings heating costs and radiator trouble, July brings the annual
-// planned hot-water outage. Privatizace (prestige) is waiting in 1989+.
+// planned hot-water outage — and in 1990 the privatizace era begins.
 
 export const SECONDS_PER_DAY = 30;
 export const DAYS_PER_MONTH = 30;
 export const MONTHS_PER_YEAR = 12;
 
-export const START_YEAR = 1983;
+export const START_YEAR = 1988;
 export const START_MONTH = 4; // duben — be kind, don't start the game in winter
 export const START_DAY = 1;
 

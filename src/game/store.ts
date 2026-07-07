@@ -4,9 +4,10 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CourtyardId, GameState, TuzexId, UpgradeId } from './types';
+import type { CourtyardId, GameState, PerkId, RepeatableId, TuzexId, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveChoice } from './events';
+import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
 import { computeOffline, type OfflineSummary } from './offline';
 import {
   addLog,
@@ -33,6 +34,7 @@ import {
   MAX_FLOORS,
   PROBLEM_DEFS,
   REP_EVICTION,
+  repeatableCost,
   TUZEX_COSTS,
   UPGRADE_COSTS,
 } from './economy';
@@ -57,6 +59,9 @@ interface PanelakStore {
   requestEviction: (flatIndex: number) => void;
   buyTuzex: (id: TuzexId) => void;
   buyKava: () => void;
+  buyRepeatable: (id: RepeatableId) => void;
+  buyPrestigePerk: (id: PerkId) => void;
+  privatize: () => void;
   resolveChoice: (optionId: string) => void;
   dismissOffline: () => void;
   applyOfflineProgress: () => void;
@@ -93,7 +98,7 @@ export const useGame = create<PanelakStore>()(
         const { game } = get();
         const b = mainBuilding(game);
         if (b.floors >= MAX_FLOORS) return;
-        const cost = floorCost(b.floors);
+        const cost = floorCost(b.floors, game.meta.perks.beton);
         if (game.money < cost) return;
 
         const newFloor = b.floors + 1;
@@ -237,6 +242,34 @@ export const useGame = create<PanelakStore>()(
         }));
         next = addLog(next, 'good', CS.toasts.kavaServed);
         set({ game: next });
+      },
+
+      buyRepeatable: (id) => {
+        const { game } = get();
+        const cost = repeatableCost(id, game.repeatables[id]);
+        if (game.money < cost) return;
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          repeatables: { ...game.repeatables, [id]: game.repeatables[id] + 1 },
+        };
+        next = addLog(
+          next,
+          'good',
+          CS.toasts.repeatableBought(CS.repeatables[id].name, next.repeatables[id]),
+        );
+        set({ game: next });
+      },
+
+      buyPrestigePerk: (id) => {
+        const { game } = get();
+        set({ game: buyPerk(game, id) });
+      },
+
+      privatize: () => {
+        const { game } = get();
+        if (!privatizaceAvailable(game)) return;
+        set({ game: applyPrestige(game), offlineSummary: null });
       },
 
       resolveChoice: (optionId) => {

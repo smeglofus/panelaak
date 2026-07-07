@@ -16,6 +16,20 @@ export type UpgradeId = 'elevatorNdr' | 'cellar' | 'satellite' | 'laundry';
 
 export type CourtyardId = 'piskoviste' | 'lavicky' | 'zahonky' | 'susak' | 'garaz';
 
+/** Endlessly repeatable upgrades — the long-term money sink. */
+export type RepeatableId = 'renovace' | 'naradi';
+
+/** Permanent perks bought with privatizační kupóny; survive every prestige. */
+export type PerkId = 'beton' | 'konexe' | 'stribro' | 'povest' | 'rucicky';
+
+export interface Meta {
+  /** How many times the house has been privatized ("éra"). */
+  prestigeLevel: number;
+  /** Unspent privatizační kupóny. */
+  kupony: number;
+  perks: Record<PerkId, number>;
+}
+
 /** Permanent Tuzex purchases (paid in bony). Káva is a repeatable consumable. */
 export type TuzexId = 'tv' | 'pracka' | 'digitalky';
 
@@ -113,8 +127,9 @@ export interface GameState {
   energy: number;
   /** Always length 1 in MVP; an array so a sídliště view doesn't need a schema rewrite. */
   buildings: Building[];
-  meta: { prestigeLevel: number };
+  meta: Meta;
   upgrades: Record<UpgradeId, boolean>;
+  repeatables: Record<RepeatableId, number>;
   /** Courtyard buildables — rendered in the scene, unlock their own events. */
   courtyard: Record<CourtyardId, boolean>;
   /** Pan Fanda: auto-repairs paid from the fund, for a wage. */

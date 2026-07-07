@@ -8,7 +8,9 @@ import type {
   Flat,
   GameState,
   MilestoneId,
+  PerkId,
   ProblemId,
+  RepeatableId,
   Tenant,
   TuzexId,
   UpgradeId,
@@ -27,9 +29,11 @@ export const FLOOR_COST_GROWTH = 2.2;
  * Cost of the next floor when the building already has `ownedFloors`.
  * Spec formula floorCost(n) = 500 * 2.2^n, with n counting *bought* floors —
  * the starting floor is free, so the first purchase is n = 0 → 500 Kčs.
+ * The "lepší beton" perk shaves the price a bit per level.
  */
-export function floorCost(ownedFloors: number): number {
-  return Math.round(FLOOR_BASE_COST * Math.pow(FLOOR_COST_GROWTH, ownedFloors - 1));
+export function floorCost(ownedFloors: number, betonLevel = 0): number {
+  const discount = 1 - BETON_DISCOUNT * betonLevel;
+  return Math.round(FLOOR_BASE_COST * Math.pow(FLOOR_COST_GROWTH, ownedFloors - 1) * discount);
 }
 
 // --- Money ------------------------------------------------------------------
@@ -61,7 +65,9 @@ export function flatRentPerSec(state: GameState, flat: Flat): number {
 
 /** Current income per second of the whole building, including upgrades. */
 export function incomePerSec(state: GameState): number {
-  const mult = state.upgrades.cellar ? CELLAR_RENT_MULT : 1;
+  let mult = state.upgrades.cellar ? CELLAR_RENT_MULT : 1;
+  mult *= 1 + RENOVACE_RENT_BONUS * state.repeatables.renovace;
+  mult *= 1 + PRESTIGE_RENT_BONUS * state.meta.prestigeLevel;
   let sum = 0;
   for (const flat of state.buildings[0].flats) {
     sum += flatRentPerSec(state, flat);
@@ -123,8 +129,57 @@ export const BRIGADE_ENERGY_COST = 10;
 /** Per second → a sustained click every 2.5 s, or a burst of 10 from full elán. */
 export const BRIGADE_ENERGY_REGEN = 4;
 
-export function brigadeReward(floors: number): number {
-  return 3 + floors;
+export function brigadeReward(floors: number, naradiLevel = 0, rucickyLevel = 0): number {
+  return 3 + floors + NARADI_REWARD_BONUS * naradiLevel + RUCICKY_BONUS * rucickyLevel;
+}
+
+// --- Repeatable upgrades (the endless money sink) ------------------------------
+
+export const RENOVACE_RENT_BONUS = 0.05;
+export const NARADI_REWARD_BONUS = 2;
+
+const REPEATABLE_BASE: Record<RepeatableId, { base: number; growth: number }> = {
+  renovace: { base: 1200, growth: 1.8 },
+  naradi: { base: 300, growth: 1.6 },
+};
+
+export function repeatableCost(id: RepeatableId, ownedLevels: number): number {
+  const def = REPEATABLE_BASE[id];
+  return Math.round(def.base * Math.pow(def.growth, ownedLevels));
+}
+
+// --- Privatizace (prestige) ------------------------------------------------------
+
+/** Prestige unlocks once the calendar reaches this year. Doba se změnila. */
+export const PRIVATIZACE_YEAR = 1990;
+/** Each éra adds a permanent rent bonus. */
+export const PRESTIGE_RENT_BONUS = 0.05;
+
+export const PERK_COSTS: Record<PerkId, number> = {
+  beton: 3,
+  konexe: 3,
+  stribro: 2,
+  povest: 2,
+  rucicky: 2,
+};
+
+export const PERK_MAX: Record<PerkId, number> = {
+  beton: 10,
+  konexe: 5,
+  stribro: 10,
+  povest: 6,
+  rucicky: 10,
+};
+
+export const BETON_DISCOUNT = 0.04;
+export const KONEXE_DISCOUNT = 0.1;
+export const STRIBRO_START_MONEY = 500;
+export const POVEST_START_REP = 5;
+export const RUCICKY_BONUS = 3;
+
+/** Fines and "fees" get milder with konexe na výboru. */
+export function fineMult(state: GameState): number {
+  return Math.max(0.5, 1 - KONEXE_DISCOUNT * state.meta.perks.konexe);
 }
 
 // --- Breakdowns -------------------------------------------------------------

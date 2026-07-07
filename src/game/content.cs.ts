@@ -5,7 +5,9 @@ import type {
   ArchetypeId,
   CourtyardId,
   MilestoneId,
+  PerkId,
   ProblemId,
+  RepeatableId,
   TuzexId,
   UpgradeId,
 } from './types';
@@ -69,6 +71,7 @@ export const CS = {
     caretakerHint: 'Opravy platí z fondu a řeší je sám. Většinou. Časem.',
     caretakerLocked: 'Domovník dává smysl až od 3 pater.',
     dvorek: 'Dvorek',
+    modernizace: 'Modernizace',
     influences: 'Co na něj působí',
     heating: (kcs: string) => `Topná sezóna: −${kcs}`,
     bony: (n: number) => `${n} bonů`,
@@ -164,6 +167,7 @@ export const CS = {
       'Dvorek není jen tráva: pískoviště, lavičky nebo záhonky zvedají náladu a přinášejí události.',
       'Čas plyne: v zimě se topí (a studí radiátory), 1. července bývá odstávka. Bony od veksláka uplatníte v Tuzexu.',
       'Nepohodlného nájemníka lze vystěhovat — za peníze, reputaci a 60 vteřin úředního řízení. Paní Vlastu ne.',
+      'Peníze nikdy nejsou zbytečné: Modernizace zvyšuje nájem donekonečna. A od roku 1990 lze dům zprivatizovat — začnete znovu s kupóny a trvalými výhodami.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -289,6 +293,8 @@ export const CS = {
     bonReceived: 'Ve schránce přistála obálka s bonem. Pan Karel nic neví.',
     bonyAwarded: (n: number) => `K odměně přibyly ${n} bony. Neoficiálně.`,
     tuzexBought: (name: string) => `Z Tuzexu dorazilo: ${name}.`,
+    repeatableBought: (name: string, level: number) =>
+      `${name} — úroveň ${level}. Dům zase o kus lepší.`,
     kavaServed:
       'Káva a čokoláda z Tuzexu kolovaly po domě. Celý dům si připadá na úrovni.',
   },
@@ -412,6 +418,59 @@ export const CS = {
     name: 'Káva a čokoláda na schůzi',
     desc: 'Jednorázově +15 spokojenosti všem. Dá se kupovat opakovaně.',
   },
+
+  repeatables: {
+    renovace: {
+      name: 'Renovace bytových jader',
+      desc: '+5 % nájemného za každou úroveň. Umakart střídá umakart, ale nový.',
+    },
+    naradi: {
+      name: 'Lepší nářadí do Akce Z',
+      desc: '+2 Kčs za kliknutí a úroveň. Vercajk dělá mistra.',
+    },
+  } satisfies Record<RepeatableId, { name: string; desc: string }>,
+
+  prestige: {
+    title: 'Privatizace',
+    era: (n: number) => `${n}. éra`,
+    kupony: (n: number) => `${n} kupónů`,
+    rumour: 'Něco se děje. V rádiu, na ulicích, ve frontách. Zatím jen šeptem.',
+    available:
+      'Doba se změnila. Dům lze zprivatizovat: začnete znovu, ale kupóny a trvalé výhody zůstanou. A každá éra přidává +5 % nájemného.',
+    projected: (n: number) => `Odhad výnosu: ${n} kupónů`,
+    button: 'Zprivatizovat dům',
+    confirm:
+      'Opravdu zprivatizovat? Dům, nájemníci i fond zmizí. Zůstanou kupóny, trvalé výhody a vzpomínky. Tak to v privatizaci chodí.',
+    done: (n: number) =>
+      `Privatizováno. Získali jste ${n} kupónů. Dům dostal nového správce — vás. Znovu.`,
+    perkBought: (name: string, level: number) => `Trvalá výhoda: ${name} (úroveň ${level}).`,
+    perksTitle: 'Trvalé výhody (za kupóny)',
+    level: (n: number) => `úroveň ${n}`,
+    maxed: 'MAX',
+  },
+
+  perks: {
+    beton: {
+      name: 'Lepší beton',
+      desc: '−4 % z ceny pater za úroveň. Panely, co drží i bez hesel.',
+    },
+    konexe: {
+      name: 'Konexe na výboru',
+      desc: '−10 % ze všech pokut a „poplatků“ za úroveň. Známý má známýho.',
+    },
+    stribro: {
+      name: 'Rodinné stříbro',
+      desc: '+500 Kčs do začátku každé éry. Babiččin servis se neprodává. Skoro.',
+    },
+    povest: {
+      name: 'Pověst dobrého správce',
+      desc: '+5 reputace do začátku každé éry. Lidé si pamatují.',
+    },
+    rucicky: {
+      name: 'Zlaté ručičky',
+      desc: '+3 Kčs za kliknutí v Akci Z. Navždy.',
+    },
+  } satisfies Record<PerkId, { name: string; desc: string }>,
 
   milestones: {
     firstFullFloor: {

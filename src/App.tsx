@@ -62,9 +62,10 @@ export default function App() {
               selected={selectedFlat}
               onSelectFlat={(i) => setSelectedFlat((cur) => (cur === i ? null : i))}
             />
+          </div>
+          <div className="scene-ground">
             <Courtyard game={game} />
           </div>
-          <div className="scene-ground" />
           {flat && <TenantCard flat={flat} onClose={() => setSelectedFlat(null)} />}
         </section>
         <SidePanel />

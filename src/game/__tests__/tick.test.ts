@@ -352,12 +352,17 @@ describe('save migration', () => {
     delete v1.caretakerHired;
     delete v1.bony;
     delete v1.tuzex;
+    delete v1.repeatables;
+    v1.meta = { prestigeLevel: 0 } as GameState['meta'];
     const migrated = migrateSave(v1 as GameState, 1);
     expect(migrated.energy).toBe(BRIGADE_ENERGY_MAX);
     expect(migrated.courtyard.piskoviste).toBe(false);
     expect(migrated.caretakerHired).toBe(false);
     expect(migrated.bony).toBe(0);
     expect(migrated.tuzex.tv).toBe(false);
+    expect(migrated.meta.kupony).toBe(0);
+    expect(migrated.meta.perks.beton).toBe(0);
+    expect(migrated.repeatables.renovace).toBe(0);
     expect(migrated.buildings[0].flats[0].tenant!.movedInAt).toBe(0);
     expect(migrated.buildings[0].flats[0].tenant!.quirkDone).toBe(false);
     expect(migrated.buildings[0].flats[0].tenant!.evictionAt).toBeNull();

@@ -63,6 +63,11 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   bulb) you approve or refuse, and the vekslák leaves **bony** you can spend
   in the **Tuzex** catalogue: a colour TV, a western washing machine, digital
   watches for the caretaker.
+- Money never runs out of purpose: **Modernizace** upgrades repeat endlessly
+  with escalating prices (+5 % rent per level of bytová jádra renovation),
+  and once the calendar hits **1990** you can privatize the house — a
+  prestige reset that pays **kupóny** for permanent perks (cheaper concrete,
+  committee connections, family silver…) plus +5 % rent per era.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

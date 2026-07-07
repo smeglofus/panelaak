@@ -28,6 +28,7 @@ import {
   TETA_BONY,
   EVENT_CHANCE,
   EVENT_GRACE_SECONDS,
+  fineMult,
   formatKcs,
   JITRNICE_HAPPINESS_BONUS,
   KSC_FINE_MAX,
@@ -81,7 +82,9 @@ export const EVENTS: readonly GameEventDef[] = [
       }
       const inBadShape = avgHappiness(s) < 50 || mainBuilding(s).elevatorBroken;
       if (inBadShape) {
-        const fine = clamp(Math.round(s.money * KSC_FINE_RATE), KSC_FINE_MIN, KSC_FINE_MAX);
+        const fine = Math.round(
+          clamp(Math.round(s.money * KSC_FINE_RATE), KSC_FINE_MIN, KSC_FINE_MAX) * fineMult(s),
+        );
         const next = {
           ...s,
           money: Math.max(0, s.money - fine),
@@ -126,7 +129,9 @@ export const EVENTS: readonly GameEventDef[] = [
         };
         return addLog(next, 'event', CS.events.stbGone(name));
       }
-      const fee = clamp(Math.round(s.money * STB_FEE_RATE), STB_FEE_MIN, STB_FEE_MAX);
+      const fee = Math.round(
+        clamp(Math.round(s.money * STB_FEE_RATE), STB_FEE_MIN, STB_FEE_MAX) * fineMult(s),
+      );
       const next = { ...s, money: Math.max(0, s.money - fee) };
       return addLog(next, 'bad', CS.events.stbFee(formatKcs(fee)));
     },
@@ -207,12 +212,13 @@ export const EVENTS: readonly GameEventDef[] = [
     weight: 12,
     condition: (s) => s.upgrades.satellite,
     apply: (s) => {
+      const fine = Math.round(SATELLITE_FINE * fineMult(s));
       const next = {
         ...s,
-        money: Math.max(0, s.money - SATELLITE_FINE),
+        money: Math.max(0, s.money - fine),
         upgrades: { ...s.upgrades, satellite: false },
       };
-      return addLog(next, 'bad', CS.events.satelliteReported(formatKcs(SATELLITE_FINE)));
+      return addLog(next, 'bad', CS.events.satelliteReported(formatKcs(fine)));
     },
   },
   {

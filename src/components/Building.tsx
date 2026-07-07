@@ -17,7 +17,7 @@ export default function Building({ game, selected, onSelectFlat }: Props) {
   const b = game.buildings[0];
   const hasElevator = isElevatorRelevant(b);
   const buyFloor = useGame((s) => s.buyFloor);
-  const nextCost = floorCost(b.floors);
+  const nextCost = floorCost(b.floors, game.meta.perks.beton);
   const floorsTopDown = Array.from({ length: b.floors }, (_, i) => b.floors - i);
 
   return (
