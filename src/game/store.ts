@@ -8,7 +8,15 @@ import type { CourtyardId, GameState, PerkId, RepeatableId, TuzexId, UpgradeId }
 import { tick } from './tick';
 import { resolveChoice } from './events';
 import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
+import { getLang, setLang, type Lang } from './i18n';
 import { computeOffline, type OfflineSummary } from './offline';
+
+// Apply the persisted language before anything renders.
+const savedLang: Lang =
+  typeof localStorage !== 'undefined' && localStorage.getItem('panelak-lang') === 'en'
+    ? 'en'
+    : 'cs';
+if (savedLang !== getLang()) setLang(savedLang);
 import {
   addLog,
   allFlats,
@@ -50,10 +58,13 @@ interface PanelakStore {
   helpOpen: boolean;
   /** Transient — which building the scene shows. */
   activeBuilding: number;
+  /** Transient mirrors of UI preferences (persisted in their own keys). */
+  lang: Lang;
 
   tickOnce: () => void;
   workBrigade: () => void;
   setHelpOpen: (open: boolean) => void;
+  setLanguage: (lang: Lang) => void;
   setActiveBuilding: (index: number) => void;
   buyFloor: (bIdx: number) => void;
   buyPlot: () => void;
@@ -82,6 +93,7 @@ export const useGame = create<PanelakStore>()(
       offlineSummary: null,
       helpOpen: false,
       activeBuilding: 0,
+      lang: savedLang,
 
       tickOnce: () => {
         const { game, offlineSummary, helpOpen } = get();
@@ -101,6 +113,16 @@ export const useGame = create<PanelakStore>()(
       },
 
       setHelpOpen: (open) => set({ helpOpen: open }),
+
+      setLanguage: (lang) => {
+        setLang(lang);
+        try {
+          localStorage.setItem('panelak-lang', lang);
+        } catch {
+          /* preference just won't persist */
+        }
+        set({ lang });
+      },
 
       setActiveBuilding: (index) =>
         set((s) => ({

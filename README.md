@@ -72,6 +72,10 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   (U Fabriky pays more but smokes, U Lesa is idyllic but remote), switched
   with tabs above the scene. The **kádrový posudek** tracks 8 badges that
   survive every privatization — each worth a kupón.
+- Full **English toggle** (EN/CZ button in the header — proper nouns stay
+  Czech, that's the identity), procedural **sound effects** via Web Audio
+  (no asset files, mutable with 🔊), and elections, funfairs and furniture
+  moving among the events.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

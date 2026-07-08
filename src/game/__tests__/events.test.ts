@@ -254,6 +254,47 @@ describe('první máj', () => {
   });
 });
 
+describe('v0.6 events', () => {
+  it('volby: going costs a little mood, skipping costs reputation', () => {
+    const opened = def('volby').apply(withTenant(freshState(), 1, { happiness: 60 }), createRng(1));
+    expect(opened.pendingChoice?.eventId).toBe('volby');
+
+    const went = resolveChoice(opened, 'go');
+    expect(went.reputation).toBeGreaterThan(opened.reputation);
+    expect(went.buildings[0].flats[1].tenant!.happiness).toBeLessThan(60);
+
+    const stayed = resolveChoice(opened, 'skip');
+    expect(stayed.reputation).toBeLessThan(opened.reputation);
+  });
+
+  it('pouť lifts everyone and costs pocket money', () => {
+    const s = { ...withTenant(freshState(), 1, { happiness: 60 }), money: 100 };
+    const next = def('pout').apply(s, createRng(1));
+    expect(next.buildings[0].flats[1].tenant!.happiness).toBeGreaterThan(60);
+    expect(next.money).toBe(80);
+  });
+
+  it('stěhování needs a couple or family and hits their floor', () => {
+    expect(eligibleEvents(withFloors(freshState(), 1)).map((e) => e.id)).not.toContain(
+      'stehovani',
+    );
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'family', happiness: 70 });
+    const next = def('stehovani').apply(s, createRng(1));
+    expect(next.buildings[0].flats[0].tenant!.happiness).toBeLessThan(70);
+  });
+
+  it('musician asks for a rehearsal room', () => {
+    let s = withFloors(freshState(), 1);
+    s = withTenant(s, 0, { archetype: 'musician', happiness: 60 });
+    s = { ...s, money: 500 };
+    const opened = def('prosba').apply(s, createRng(1));
+    expect(opened.pendingChoice?.requestId).toBe('zkouska');
+    const allowed = resolveChoice(opened, 'allow');
+    expect(allowed.buildings[0].flats[0].tenant!.happiness).toBe(75);
+  });
+});
+
 describe('timed events expire', () => {
   it('hot water comes back and logs it', () => {
     let s = { ...freshState(), tick: 10, activeEvents: [{ id: 'hotWater', remaining: 1 }] };

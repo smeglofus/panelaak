@@ -94,6 +94,14 @@ button {
   background: rgba(240, 232, 216, 0.18);
 }
 
+.lang-btn {
+  width: auto;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
 .header-badge {
   background: #f6eecf;
   color: var(--red);

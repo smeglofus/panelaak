@@ -3,6 +3,8 @@
 // Winter brings heating costs and radiator trouble, July brings the annual
 // planned hot-water outage — and in 1990 the privatizace era begins.
 
+import { getLang } from './i18n';
+
 export const SECONDS_PER_DAY = 30;
 export const DAYS_PER_MONTH = 30;
 export const MONTHS_PER_YEAR = 12;
@@ -63,7 +65,25 @@ const MONTHS_GENITIVE = [
   'prosince',
 ];
 
+const MONTHS_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 export function formatDateCs(date: GameDate): string {
+  if (getLang() === 'en') {
+    return `${date.day} ${MONTHS_EN[date.month - 1]} ${date.year}`;
+  }
   return `${date.day}. ${MONTHS_GENITIVE[date.month - 1]} ${date.year}`;
 }
 

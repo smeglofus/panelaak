@@ -9,6 +9,7 @@ import ChoiceModal from './components/ChoiceModal';
 import TenantCard from './components/TenantCard';
 import HelpModal from './components/HelpModal';
 import Courtyard from './components/Courtyard';
+import { isMuted, setMuted } from './sound';
 
 export default function App() {
   const game = useGame((s) => s.game);
@@ -17,7 +18,10 @@ export default function App() {
   const setHelpOpen = useGame((s) => s.setHelpOpen);
   const activeBuilding = useGame((s) => s.activeBuilding);
   const setActiveBuilding = useGame((s) => s.setActiveBuilding);
+  const lang = useGame((s) => s.lang);
+  const setLanguage = useGame((s) => s.setLanguage);
   const [selectedFlat, setSelectedFlat] = useState<number | null>(null);
+  const [muted, setMutedState] = useState(isMuted());
   const bIdx = Math.min(activeBuilding, game.buildings.length - 1);
 
   // The single 1000 ms game loop (spec §4). The store skips ticks while a
@@ -47,6 +51,25 @@ export default function App() {
         </div>
         <div className="header-right">
           {game.milestones.vzornyDum && <div className="header-badge">★ {CS.ui.plaque}</div>}
+          <button
+            type="button"
+            className="help-btn lang-btn"
+            title={lang === 'cs' ? 'Switch to English' : 'Přepnout do češtiny'}
+            onClick={() => setLanguage(lang === 'cs' ? 'en' : 'cs')}
+          >
+            {lang === 'cs' ? 'EN' : 'CZ'}
+          </button>
+          <button
+            type="button"
+            className="help-btn"
+            title={muted ? 'Zvuk zapnout' : 'Zvuk vypnout'}
+            onClick={() => {
+              setMuted(!muted);
+              setMutedState(!muted);
+            }}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
           <button
             type="button"
             className="help-btn"

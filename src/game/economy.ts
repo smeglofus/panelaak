@@ -306,8 +306,19 @@ export const GARAGE_VEKSLAK_MULT = 1.2;
 
 /** Per second → roughly one event per 90–150 s of play (spec §6.5). */
 export const EVENT_CHANCE = 1 / 120;
+/** A bigger sídliště is a busier sídliště: +30 % event rate per extra building. */
+export const EVENT_SIDLISTE_BONUS = 0.3;
 /** No events during the first moments of a fresh game. */
 export const EVENT_GRACE_SECONDS = 45;
+
+// v0.6 events
+export const VOLBY_REP_GO = 4;
+export const VOLBY_HAPPINESS_HIT = 3;
+export const VOLBY_REP_SKIP = -8;
+export const POUT_HAPPINESS_BONUS = 12;
+export const POUT_COST = 20;
+export const INVENTURA_HIT = 8;
+export const STEHOVANI_HIT = 10;
 
 export const KSC_FINE_RATE = 0.1;
 export const KSC_FINE_MIN = 20;

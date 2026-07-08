@@ -25,6 +25,7 @@ export const CS = {
   subtitle: 'Správa domu v dobách reálného socialismu',
 
   ui: {
+    panelHeader: 'DOMOVNÍ SPRÁVA',
     fund: 'Domovní fond',
     reputation: 'Reputace',
     avgHappiness: 'Spokojenost',
@@ -358,6 +359,17 @@ export const CS = {
     majSkipped: 'Nástěnka zela prázdnotou. Soudruzi si toho všimli. A zapsali si to.',
     teta: 'Balík od tety z Vídně. Káva, bony a vůně, kterou Jednota nezná.',
     prosbaTitle: 'Prosba nájemníka',
+    volbyTitle: 'Volby',
+    volbyBody:
+      'Volební místnost je otevřena. Účast se očekává manifestační. Vaši nájemníci se dívají, jak se zachová správa domu.',
+    volbyGo: 'Jít manifestačně (a vzít sousedy)',
+    volbySkip: 'Zůstat doma',
+    volbyWent: 'Účast 99,4 %. Volební komise si vaši ochotu zapsala. Fronta byla dlouhá.',
+    volbySkipped: 'Nešli jste. Nikdo nic neřekl. Všichni si to zapsali.',
+    pout: 'Přijela pouť! Střelnice, cukrová vata, kolotoč. Děti chtějí drobné a dostaly je.',
+    inventura: 'Inventura v Jednotě. Nemají nic. Ani frontu. Sídliště truchlí.',
+    stehovani: (floor: number) =>
+      `Stěhování nábytku. Sekce jede do ${floor}. patra. Schodištěm. Za hlasitého odborného vedení.`,
   },
 
   requests: {
@@ -398,6 +410,22 @@ export const CS = {
       refuse: 'Tma šetří elektřinu',
       allowed: 'Na chodbě se rozsvítilo. Drobnost, ale dům si všiml.',
       refused: 'Chodba zůstává temná. Jako vaše pověst u nájemníka.',
+    },
+    zkouska: {
+      body: (name: string) =>
+        `${name} prosí o zkušebnu v kočárkárně. „Jen komorní repertoár. Skoro.“`,
+      allow: 'Povolit zkoušení',
+      refuse: 'Zamítnout',
+      allowed: 'Kočárkárnou zní smyčce. Kočárky si zvykly, sousedé pomalu.',
+      refused: 'Zkoušení zamítnuto. Umělec trpí. Nahlas a v mollové tónině.',
+    },
+    kralikarna: {
+      body: (name: string) =>
+        `${name} prosí o králíkárnu za domem. „Čerstvé maso, soudruhu. A děti se něco naučí.“`,
+      allow: 'Povolit králíkárnu (30 Kčs)',
+      refuse: 'Zamítnout',
+      allowed: 'Za domem vyrostla králíkárna. Směnaři mají o víkendech program.',
+      refused: 'Králíkárna zamítnuta. Králíci si oddechli, směnaři ne.',
     },
   },
 

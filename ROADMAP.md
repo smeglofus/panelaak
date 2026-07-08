@@ -55,10 +55,20 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
 - **Kádrový posudek** — 8 odznaků (Úderník, Prověřený, Budovatel…), přežívají
   privatizaci a každý nese kupón
 
-## v0.6 (další)
+## v0.6 *(hotovo)*
 
-- Zvuky (výtah, sídlištní ambient), anglický toggle — dosah
-- Více questů a eventů, balanc endgame
+- **Zvuky** — procedurální Web Audio (žádné soubory): kliknutí Akce Z, dobré/
+  špatné zprávy, milníky; přepínač 🔊/🔇 v hlavičce
+- **Anglický toggle** — kompletní překlad (content.en.ts typovaný jako
+  `typeof CS`, kompilátor hlídá úplnost), přepínač EN/CZ, anglická data
+- **Nové eventy**: volby (manifestační účast — volba), pouť, inventura
+  v Jednotě, stěhování nábytku; **nové prosby**: zkušebna hudebníka,
+  králíkárna směnaře
+- **Balanc**: větší sídliště = rušnější sídliště (+30 % eventů za další dům)
+
+## v0.7 (nápady)
+
+- Sprite/pixel-art pass, Steam/itch packaging (Tauri), leaderboard bez backendu?
 
 ## Průběžně
 

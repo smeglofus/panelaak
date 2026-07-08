@@ -28,8 +28,16 @@ import {
   TETA_BONY,
   EVENT_CHANCE,
   EVENT_GRACE_SECONDS,
+  EVENT_SIDLISTE_BONUS,
   fineMult,
   formatKcs,
+  INVENTURA_HIT,
+  POUT_COST,
+  POUT_HAPPINESS_BONUS,
+  STEHOVANI_HIT,
+  VOLBY_HAPPINESS_HIT,
+  VOLBY_REP_GO,
+  VOLBY_REP_SKIP,
   JITRNICE_HAPPINESS_BONUS,
   KSC_FINE_MAX,
   KSC_FINE_MIN,
@@ -311,6 +319,66 @@ export const EVENTS: readonly GameEventDef[] = [
     }),
   },
   {
+    id: 'pout',
+    weight: 8,
+    apply: (s) => {
+      let next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + POUT_HAPPINESS_BONUS, 0, 100),
+      }));
+      next = { ...next, money: Math.max(0, next.money - POUT_COST) };
+      return addLog(next, 'good', CS.events.pout);
+    },
+  },
+  {
+    id: 'inventura',
+    weight: 8,
+    apply: (s) => {
+      const next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness - INVENTURA_HIT, 0, 100),
+      }));
+      return addLog(next, 'bad', CS.events.inventura);
+    },
+  },
+  {
+    id: 'stehovani',
+    weight: 8,
+    condition: (s) =>
+      allFlats(s).some(
+        (f) => f.tenant?.archetype === 'couple' || f.tenant?.archetype === 'family',
+      ),
+    apply: (s, rng) => {
+      const movers = allFlats(s).filter(
+        (f) => f.tenant?.archetype === 'couple' || f.tenant?.archetype === 'family',
+      );
+      const spot = rng.pick(movers);
+      const next = mapTenants(s, (t, f) =>
+        f.bldg === spot.bldg && f.floor === spot.floor
+          ? { ...t, happiness: clamp(t.happiness - STEHOVANI_HIT, 0, 100) }
+          : t,
+      );
+      return addLog(next, 'info', CS.events.stehovani(spot.floor));
+    },
+  },
+  {
+    id: 'volby',
+    weight: 8,
+    condition: (s) => s.pendingChoice === null,
+    apply: (s) => ({
+      ...s,
+      pendingChoice: {
+        eventId: 'volby',
+        title: CS.events.volbyTitle,
+        body: CS.events.volbyBody,
+        options: [
+          { id: 'go', label: CS.events.volbyGo },
+          { id: 'skip', label: CS.events.volbySkip },
+        ],
+      },
+    }),
+  },
+  {
     id: 'teta',
     weight: 6,
     apply: (s) => {
@@ -408,6 +476,16 @@ export const REQUEST_DEFS: Record<RequestId, RequestDef> = {
       })),
     onRefuse: (s, i) => bumpTenant(s, i, -6),
   },
+  zkouska: {
+    cost: 0,
+    onAllow: (s, i) => bumpFloorOthers(bumpTenant(s, i, 15), i, -5),
+    onRefuse: (s, i) => bumpTenant(s, i, -10),
+  },
+  kralikarna: {
+    cost: 30,
+    onAllow: (s) => bumpArchetype({ ...s, money: s.money - 30 }, 'shift', 12),
+    onRefuse: (s) => bumpArchetype(s, 'shift', -8),
+  },
 };
 
 const REQUEST_BY_ARCHETYPE: Partial<Record<string, RequestId>> = {
@@ -416,6 +494,8 @@ const REQUEST_BY_ARCHETYPE: Partial<Record<string, RequestId>> = {
   drunk: 'odklad',
   pensioner: 'zabradli',
   kutil: 'nedele',
+  musician: 'zkouska',
+  shift: 'kralikarna',
 };
 
 /** 1. máj: the entrance decoration is expected. Triggered from the calendar. */
@@ -455,7 +535,9 @@ export function processEvents(s: GameState, rng: Rng): GameState {
   }
 
   if (s.tick < EVENT_GRACE_SECONDS) return s;
-  if (!rng.chance(EVENT_CHANCE)) return s;
+  // A bigger sídliště generates more life.
+  const chance = EVENT_CHANCE * (1 + EVENT_SIDLISTE_BONUS * (s.buildings.length - 1));
+  if (!rng.chance(chance)) return s;
 
   const eligible = eligibleEvents(s);
   if (eligible.length === 0) return s;
@@ -514,6 +596,19 @@ const CHOICE_RESOLVERS: Record<
     );
     s = { ...s, reputation: clamp(s.reputation + REP_AZOR_SKIP, 0, 100) };
     return addLog(s, 'info', CS.events.azorReturned);
+  },
+
+  volby: (s, optionId) => {
+    if (optionId === 'go') {
+      s = { ...s, reputation: clamp(s.reputation + VOLBY_REP_GO, 0, 100) };
+      s = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness - VOLBY_HAPPINESS_HIT, 0, 100),
+      }));
+      return addLog(s, 'good', CS.events.volbyWent);
+    }
+    s = { ...s, reputation: clamp(s.reputation + VOLBY_REP_SKIP, 0, 100) };
+    return addLog(s, 'bad', CS.events.volbySkipped);
   },
 
   prvnimaj: (s, optionId) => {

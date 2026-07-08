@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../game/types';
+import { play, type SoundId } from '../sound';
 
 const TOAST_MS = 7000;
 const MAX_VISIBLE = 4;
@@ -26,6 +27,18 @@ export default function EventToast({ log }: { log: LogEntry[] }) {
     const fresh = log.filter((e) => e.seq > seen);
     if (fresh.length === 0) return;
     lastSeen.current = latest;
+    // One sound per batch — the most important entry wins.
+    const kinds = fresh.map((e) => e.kind);
+    const soundKind: SoundId = kinds.includes('milestone')
+      ? 'milestone'
+      : kinds.includes('bad')
+        ? 'bad'
+        : kinds.includes('good')
+          ? 'good'
+          : kinds.includes('event')
+            ? 'event'
+            : 'info';
+    play(soundKind);
     const now = Date.now();
     setToasts((cur) =>
       [...cur, ...fresh.map((entry) => ({ entry, expiresAt: now + TOAST_MS }))].slice(

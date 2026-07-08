@@ -7,6 +7,7 @@ import { useGame } from '../game/store';
 import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/state';
 import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
 import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
+import { play } from '../sound';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
@@ -57,7 +58,7 @@ export default function SidePanel() {
 
   return (
     <aside className="panel">
-      <div className="panel-header">DOMOVNÍ SPRÁVA</div>
+      <div className="panel-header">{CS.ui.panelHeader}</div>
 
       <div className="date-row">
         <span>
@@ -101,7 +102,10 @@ export default function SidePanel() {
           type="button"
           className="btn btn-brigade"
           disabled={game.energy < BRIGADE_ENERGY_COST}
-          onClick={workBrigade}
+          onClick={() => {
+            play('click');
+            workBrigade();
+          }}
         >
           🔨 {CS.ui.brigadeAction} · +{formatKcs(brigadeReward(totalFloors(game), game.repeatables.naradi, game.meta.perks.rucicky))}
         </button>
