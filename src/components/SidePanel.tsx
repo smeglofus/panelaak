@@ -1,10 +1,10 @@
 // The "domovní správa" notice board: money, stats, contextual repairs,
 // upgrades, milestones, new game.
 
-import type { CourtyardId, MilestoneId, PerkId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
+import type { BadgeId, CourtyardId, MilestoneId, PerkId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
-import { avgHappiness, occupiedCount } from '../game/state';
+import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/state';
 import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
 import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
 import {
@@ -19,9 +19,12 @@ import {
   HEATING_COST_PER_FLOOR,
   incomePerSec,
   KAVA_COST_BONY,
+  MAX_BUILDINGS,
+  MAX_FLOORS,
   PERK_COSTS,
   PERK_MAX,
   PROBLEM_DEFS,
+  PLOT_COSTS,
   repeatableCost,
   TUZEX_COSTS,
   UPGRADE_COSTS,
@@ -39,14 +42,16 @@ export default function SidePanel() {
   const buyRepeatable = useGame((s) => s.buyRepeatable);
   const buyPrestigePerk = useGame((s) => s.buyPrestigePerk);
   const privatize = useGame((s) => s.privatize);
+  const buyPlot = useGame((s) => s.buyPlot);
   const hireCaretaker = useGame((s) => s.hireCaretaker);
   const fireCaretaker = useGame((s) => s.fireCaretaker);
   const newGame = useGame((s) => s.newGame);
 
-  const b = game.buildings[0];
-  const problems = b.flats.filter((f) => f.problem);
-  const anythingBroken = b.elevatorBroken || problems.length > 0;
-  const elevCost = elevatorRepairCost(b.floors);
+  const problems = allFlats(game).filter((f) => f.problem);
+  const brokenElevators = game.buildings
+    .map((bb, i) => ({ building: bb, i }))
+    .filter(({ building }) => building.elevatorBroken);
+  const anythingBroken = brokenElevators.length > 0 || problems.length > 0;
   const date = dateFromTick(game.tick);
   const winter = isWinter(date);
 
@@ -60,7 +65,7 @@ export default function SidePanel() {
         </span>
         {winter && (
           <span className="heating-note">
-            {CS.ui.heating(formatKcsPerSec(HEATING_COST_PER_FLOOR * b.floors))}
+            {CS.ui.heating(formatKcsPerSec(HEATING_COST_PER_FLOOR * totalFloors(game)))}
           </span>
         )}
       </div>
@@ -86,7 +91,7 @@ export default function SidePanel() {
         </div>
         <div className="stat">
           <span className="stat-label">{CS.ui.occupancy}</span>
-          <span className="stat-value">{CS.ui.flatsCount(occupiedCount(game), b.flats.length)}</span>
+          <span className="stat-value">{CS.ui.flatsCount(occupiedCount(game), allFlats(game).length)}</span>
         </div>
       </div>
 
@@ -98,7 +103,7 @@ export default function SidePanel() {
           disabled={game.energy < BRIGADE_ENERGY_COST}
           onClick={workBrigade}
         >
-          🔨 {CS.ui.brigadeAction} · +{formatKcs(brigadeReward(b.floors))}
+          🔨 {CS.ui.brigadeAction} · +{formatKcs(brigadeReward(totalFloors(game), game.repeatables.naradi, game.meta.perks.rucicky))}
         </button>
         <div className="energy-row">
           <span className="energy-label">{CS.ui.energy}</span>
@@ -110,19 +115,21 @@ export default function SidePanel() {
         <p className="brigade-hint">{CS.ui.brigadeHint}</p>
       </section>
 
-      {(b.elevatorBroken || problems.length > 0) && (
+      {anythingBroken && (
         <section className="panel-section panel-alert">
           <h3>{CS.ui.repairs}</h3>
-          {b.elevatorBroken && (
+          {brokenElevators.map(({ building, i }) => (
             <button
               type="button"
+              key={`elev-${i}`}
               className="btn btn-repair"
-              disabled={game.money < elevCost}
-              onClick={repairElevator}
+              disabled={game.money < elevatorRepairCost(building.floors)}
+              onClick={() => repairElevator(i)}
             >
-              ⚠️ {CS.ui.repairElevator} · {formatKcs(elevCost)}
+              ⚠️ {CS.ui.repairElevator} ({CS.sites[building.site].name}) ·{' '}
+              {formatKcs(elevatorRepairCost(building.floors))}
             </button>
-          )}
+          ))}
           {problems.map((f) => (
             <button
               type="button"
@@ -138,7 +145,7 @@ export default function SidePanel() {
         </section>
       )}
 
-      {b.floors >= CARETAKER_MIN_FLOORS && (
+      {game.buildings.some((bb) => bb.floors >= CARETAKER_MIN_FLOORS) && (
         <section className="panel-section">
           <h3>{CS.ui.domovnik}</h3>
           {game.caretakerHired ? (
@@ -286,6 +293,38 @@ export default function SidePanel() {
         <p className="brigade-hint">{CS.ui.tuzexHint}</p>
       </section>
 
+      <section className="panel-section">
+        <h3>{CS.sidliste.title}</h3>
+        <ul className="sidliste-list">
+          {game.buildings.map((bb, i) => (
+            <li key={i}>
+              🏢 {CS.sites[bb.site].name} — {bb.floors}
+              {' '}p., {CS.ui.flatsCount(bb.flats.filter((f) => f.tenant).length, bb.flats.length)}
+            </li>
+          ))}
+        </ul>
+        {game.buildings.length < MAX_BUILDINGS &&
+          (game.buildings[game.buildings.length - 1].floors >= MAX_FLOORS ? (
+            <button
+              type="button"
+              className="btn btn-brigade"
+              disabled={game.money < PLOT_COSTS[game.buildings.length]}
+              onClick={buyPlot}
+            >
+              🏗️{' '}
+              {CS.sidliste.buyPlot(
+                CS.sites[game.buildings.length].name,
+                formatKcs(PLOT_COSTS[game.buildings.length]),
+              )}
+            </button>
+          ) : (
+            <p className="brigade-hint">{CS.sidliste.needFullHouse}</p>
+          ))}
+        {game.buildings.length >= MAX_BUILDINGS && (
+          <p className="brigade-hint">{CS.sidliste.complete}</p>
+        )}
+      </section>
+
       {(privatizaceRumoured(game) || game.meta.prestigeLevel > 0 || game.meta.kupony > 0) && (
         <section className="panel-section panel-prestige">
           <h3>
@@ -347,6 +386,23 @@ export default function SidePanel() {
           )}
         </section>
       )}
+
+      <section className="panel-section">
+        <h3>{CS.posudek.title}</h3>
+        <ul className="milestones">
+          {(Object.keys(CS.badges) as BadgeId[]).map((id) => (
+            <li
+              key={id}
+              className={game.meta.badges[id] ? 'done' : ''}
+              title={CS.badges[id].desc}
+            >
+              {game.meta.badges[id] ? '★' : '☆'} {CS.badges[id].label}
+              <span className="badge-desc"> — {CS.badges[id].desc}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="brigade-hint">{CS.posudek.hint}</p>
+      </section>
 
       <section className="panel-section">
         <h3>{CS.ui.milestones}</h3>

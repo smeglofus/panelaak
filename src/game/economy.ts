@@ -36,6 +36,29 @@ export function floorCost(ownedFloors: number, betonLevel = 0): number {
   return Math.round(FLOOR_BASE_COST * Math.pow(FLOOR_COST_GROWTH, ownedFloors - 1) * discount);
 }
 
+// --- Sídliště (multiple buildings) ---------------------------------------------
+
+export const MAX_BUILDINGS = 3;
+
+export interface SiteDef {
+  /** Rent multiplier for tenants living there. */
+  rentMult: number;
+  /** Happiness target shift for the whole building. */
+  targetDelta: number;
+  /** Move-in chance multiplier. */
+  moveInMult: number;
+}
+
+/** Building sites, by Building.site index. Flavor lives in content.cs.ts. */
+export const SITES: readonly SiteDef[] = [
+  { rentMult: 1, targetDelta: 0, moveInMult: 1 }, // Jiráskova — the original
+  { rentMult: 1.15, targetDelta: -5, moveInMult: 1.1 }, // U Fabriky — smoke, but jobs
+  { rentMult: 0.95, targetDelta: 8, moveInMult: 0.8 }, // U Lesa — quiet, remote
+];
+
+/** Price of the next plot (index = current number of buildings). */
+export const PLOT_COSTS = [0, 25000, 100000];
+
 // --- Money ------------------------------------------------------------------
 
 export const STARTING_MONEY = 150;
@@ -53,24 +76,27 @@ export function tenantRentPerSec(tenant: Tenant): number {
   return rentPerSec(ARCHETYPES[tenant.archetype].rentMult, tenant.happiness);
 }
 
-/** Rent of one flat including courtyard synergies (garage × vekslák). */
+/** Rent of one flat including site and courtyard synergies (garage × vekslák). */
 export function flatRentPerSec(state: GameState, flat: Flat): number {
   if (!flat.tenant) return 0;
   let rent = tenantRentPerSec(flat.tenant);
+  rent *= SITES[state.buildings[flat.bldg]?.site ?? 0].rentMult;
   if (state.courtyard.garaz && flat.tenant.archetype === 'vekslak') {
     rent *= GARAGE_VEKSLAK_MULT;
   }
   return rent;
 }
 
-/** Current income per second of the whole building, including upgrades. */
+/** Current income per second of the whole sídliště, including upgrades. */
 export function incomePerSec(state: GameState): number {
   let mult = state.upgrades.cellar ? CELLAR_RENT_MULT : 1;
   mult *= 1 + RENOVACE_RENT_BONUS * state.repeatables.renovace;
   mult *= 1 + PRESTIGE_RENT_BONUS * state.meta.prestigeLevel;
   let sum = 0;
-  for (const flat of state.buildings[0].flats) {
-    sum += flatRentPerSec(state, flat);
+  for (const building of state.buildings) {
+    for (const flat of building.flats) {
+      sum += flatRentPerSec(state, flat);
+    }
   }
   return sum * mult;
 }
@@ -181,6 +207,14 @@ export const RUCICKY_BONUS = 3;
 export function fineMult(state: GameState): number {
   return Math.max(0.5, 1 - KONEXE_DISCOUNT * state.meta.perks.konexe);
 }
+
+// --- Kádrový posudek (badges) -----------------------------------------------------
+
+/** Each badge pays this many kupóny, once, forever. */
+export const BADGE_KUPON_REWARD = 1;
+export const UDERNIK_CLICKS = 250;
+export const PROVERENY_STB_VISITS = 5;
+export const MILIONAR_EARNED = 1_000_000;
 
 // --- Breakdowns -------------------------------------------------------------
 

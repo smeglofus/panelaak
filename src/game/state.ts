@@ -22,20 +22,52 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
+
+export function createDefaultBadges(): Meta['badges'] {
+  return {
+    udernik: false,
+    provereny: false,
+    plnyDum: false,
+    milionar: false,
+    prezimoval: false,
+    budovatel: false,
+    vzorny: false,
+    kapitalista: false,
+  };
+}
 
 export function createDefaultMeta(): Meta {
   return {
     prestigeLevel: 0,
     kupony: 0,
     perks: { beton: 0, konexe: 0, stribro: 0, povest: 0, rucicky: 0 },
+    badges: createDefaultBadges(),
   };
 }
 
 const LOG_CAP = 50;
 
-export function createFlat(index: number, floor: number): Flat {
-  return { index, floor, tenant: null, problem: null };
+export function createFlat(index: number, floor: number, bldg = 0): Flat {
+  return { index, floor, bldg, tenant: null, problem: null };
+}
+
+/** A fresh 1-floor building on the given site; flat indices stay globally unique. */
+export function createBuilding(site: number, bldgIndex: number, firstFlatIndex: number): Building {
+  const flats = [
+    createFlat(firstFlatIndex, 1, bldgIndex),
+    createFlat(firstFlatIndex + 1, 1, bldgIndex),
+  ];
+  return { floors: 1, flats, elevatorBroken: false, site };
+}
+
+/** Every flat across the whole sídliště. */
+export function allFlats(s: GameState): Flat[] {
+  return s.buildings.flatMap((b) => b.flats);
+}
+
+export function totalFloors(s: GameState): number {
+  return s.buildings.reduce((sum, b) => sum + b.floors, 0);
 }
 
 export function createInitialState(seed?: number, meta?: Meta): GameState {
@@ -45,10 +77,8 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
 
   // Start with one floor, two flats, and one reliable tenant already home —
   // the game must feel alive within the first minute (spec §2).
-  const flats = [createFlat(0, 1), createFlat(1, 1)];
-  flats[0].tenant = createTenant(rng, 1, TENANT_STARTING_HAPPINESS + 10, 0, 'shift');
-
-  const building: Building = { floors: 1, flats, elevatorBroken: false };
+  const building: Building = createBuilding(0, 0, 0);
+  building.flats[0].tenant = createTenant(rng, 1, TENANT_STARTING_HAPPINESS + 10, 0, 'shift');
 
   return {
     version: SAVE_VERSION,
@@ -78,7 +108,14 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
     },
     log: [],
     logSeq: 0,
-    stats: { moveIns: 0, moveOuts: 0, eventsFired: 0, breakdowns: 0 },
+    stats: {
+      moveIns: 0,
+      moveOuts: 0,
+      eventsFired: 0,
+      breakdowns: 0,
+      brigadeClicks: 0,
+      stbVisits: 0,
+    },
     nextTenantId: 2,
     lastSaved: Date.now(),
   };
@@ -99,13 +136,17 @@ export function clamp(n: number, lo: number, hi: number): number {
 }
 
 export function avgHappiness(s: GameState): number {
-  const tenants = mainBuilding(s).flats.filter((f) => f.tenant);
+  const tenants = allFlats(s).filter((f) => f.tenant);
   if (tenants.length === 0) return 0;
   return tenants.reduce((sum, f) => sum + f.tenant!.happiness, 0) / tenants.length;
 }
 
 export function occupiedCount(s: GameState): number {
-  return mainBuilding(s).flats.filter((f) => f.tenant).length;
+  return allFlats(s).filter((f) => f.tenant).length;
+}
+
+export function occupiedIn(b: Building): number {
+  return b.flats.filter((f) => f.tenant).length;
 }
 
 export function isEventActive(s: GameState, id: string): boolean {
@@ -113,28 +154,33 @@ export function isEventActive(s: GameState, id: string): boolean {
 }
 
 export function hasArchetype(s: GameState, archetype: ArchetypeId): boolean {
-  return mainBuilding(s).flats.some((f) => f.tenant?.archetype === archetype);
+  return allFlats(s).some((f) => f.tenant?.archetype === archetype);
 }
 
-/** Immutably transform every tenant in the building. */
+/** Immutably transform every tenant across the sídliště. */
 export function mapTenants(
   s: GameState,
   fn: (tenant: Tenant, flat: Flat) => Tenant,
 ): GameState {
-  const b = mainBuilding(s);
-  const flats = b.flats.map((f) => (f.tenant ? { ...f, tenant: fn(f.tenant, f) } : f));
-  return { ...s, buildings: [{ ...b, flats }] };
+  const buildings = s.buildings.map((b) => ({
+    ...b,
+    flats: b.flats.map((f) => (f.tenant ? { ...f, tenant: fn(f.tenant, f) } : f)),
+  }));
+  return { ...s, buildings };
 }
 
-/** Immutably replace a single flat by index. */
+/** Immutably replace a single flat by its global index. */
 export function updateFlat(
   s: GameState,
   index: number,
   fn: (flat: Flat) => Flat,
 ): GameState {
-  const b = mainBuilding(s);
-  const flats = b.flats.map((f) => (f.index === index ? fn(f) : f));
-  return { ...s, buildings: [{ ...b, flats }] };
+  const buildings = s.buildings.map((b) =>
+    b.flats.some((f) => f.index === index)
+      ? { ...b, flats: b.flats.map((f) => (f.index === index ? fn(f) : f)) }
+      : b,
+  );
+  return { ...s, buildings };
 }
 
 export function vacateFlat(s: GameState, index: number): GameState {
@@ -147,16 +193,13 @@ export function vacateFlat(s: GameState, index: number): GameState {
  */
 export function applyBrigadeWork(s: GameState): GameState {
   if (s.energy < BRIGADE_ENERGY_COST) return s;
-  const reward = brigadeReward(
-    mainBuilding(s).floors,
-    s.repeatables.naradi,
-    s.meta.perks.rucicky,
-  );
+  const reward = brigadeReward(totalFloors(s), s.repeatables.naradi, s.meta.perks.rucicky);
   return {
     ...s,
     energy: s.energy - BRIGADE_ENERGY_COST,
     money: s.money + reward,
     totalEarned: s.totalEarned + reward,
+    stats: { ...s.stats, brigadeClicks: s.stats.brigadeClicks + 1 },
   };
 }
 
@@ -218,6 +261,27 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
         prestigeLevel: g.meta?.prestigeLevel ?? 0,
       },
       repeatables: { renovace: 0, naradi: 0 },
+    };
+  }
+  if (fromVersion < 6) {
+    // v6 added the sídliště (sites, per-flat building index) and badges.
+    g = {
+      ...g,
+      version: 6,
+      meta: {
+        ...g.meta,
+        badges: g.meta.badges ?? createDefaultBadges(),
+      },
+      stats: {
+        ...g.stats,
+        brigadeClicks: g.stats.brigadeClicks ?? 0,
+        stbVisits: g.stats.stbVisits ?? 0,
+      },
+      buildings: g.buildings.map((b, bi) => ({
+        ...b,
+        site: b.site ?? bi,
+        flats: b.flats.map((f) => ({ ...f, bldg: f.bldg ?? bi })),
+      })),
     };
   }
   return g;

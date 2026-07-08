@@ -11,11 +11,12 @@ import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
 import { computeOffline, type OfflineSummary } from './offline';
 import {
   addLog,
+  allFlats,
   applyBrigadeWork,
   clamp,
+  createBuilding,
   createFlat,
   createInitialState,
-  mainBuilding,
   mapTenants,
   migrateSave,
   SAVE_VERSION,
@@ -31,7 +32,9 @@ import {
   floorCost,
   KAVA_COST_BONY,
   KAVA_HAPPINESS_BONUS,
+  MAX_BUILDINGS,
   MAX_FLOORS,
+  PLOT_COSTS,
   PROBLEM_DEFS,
   REP_EVICTION,
   repeatableCost,
@@ -45,16 +48,20 @@ interface PanelakStore {
   offlineSummary: OfflineSummary | null;
   /** Transient — the help overlay also pauses the tick loop. */
   helpOpen: boolean;
+  /** Transient — which building the scene shows. */
+  activeBuilding: number;
 
   tickOnce: () => void;
   workBrigade: () => void;
   setHelpOpen: (open: boolean) => void;
-  buyFloor: () => void;
+  setActiveBuilding: (index: number) => void;
+  buyFloor: (bIdx: number) => void;
+  buyPlot: () => void;
   buyUpgrade: (id: UpgradeId) => void;
   buyCourtyard: (id: CourtyardId) => void;
   hireCaretaker: () => void;
   fireCaretaker: () => void;
-  repairElevator: () => void;
+  repairElevator: (bIdx: number) => void;
   repairProblem: (flatIndex: number) => void;
   requestEviction: (flatIndex: number) => void;
   buyTuzex: (id: TuzexId) => void;
@@ -74,6 +81,7 @@ export const useGame = create<PanelakStore>()(
       game: createInitialState(),
       offlineSummary: null,
       helpOpen: false,
+      activeBuilding: 0,
 
       tickOnce: () => {
         const { game, offlineSummary, helpOpen } = get();
@@ -94,28 +102,49 @@ export const useGame = create<PanelakStore>()(
 
       setHelpOpen: (open) => set({ helpOpen: open }),
 
-      buyFloor: () => {
+      setActiveBuilding: (index) =>
+        set((s) => ({
+          activeBuilding: Math.max(0, Math.min(index, s.game.buildings.length - 1)),
+        })),
+
+      buyFloor: (bIdx) => {
         const { game } = get();
-        const b = mainBuilding(game);
-        if (b.floors >= MAX_FLOORS) return;
+        const b = game.buildings[bIdx];
+        if (!b || b.floors >= MAX_FLOORS) return;
         const cost = floorCost(b.floors, game.meta.perks.beton);
         if (game.money < cost) return;
 
         const newFloor = b.floors + 1;
-        const baseIndex = b.flats.length;
+        const baseIndex = allFlats(game).length; // globally unique flat indices
         const flats = [
           ...b.flats,
           ...Array.from({ length: FLATS_PER_FLOOR }, (_, i) =>
-            createFlat(baseIndex + i, newFloor),
+            createFlat(baseIndex + i, newFloor, bIdx),
           ),
         ];
+        const buildings = game.buildings.map((bb, i) =>
+          i === bIdx ? { ...bb, floors: newFloor, flats } : bb,
+        );
+        let next: GameState = { ...game, money: game.money - cost, buildings };
+        next = addLog(next, 'good', CS.toasts.floorBought(newFloor));
+        set({ game: next });
+      },
+
+      buyPlot: () => {
+        const { game } = get();
+        const count = game.buildings.length;
+        if (count >= MAX_BUILDINGS) return;
+        if (game.buildings[count - 1].floors < MAX_FLOORS) return;
+        const cost = PLOT_COSTS[count];
+        if (game.money < cost) return;
+        const building = createBuilding(count, count, allFlats(game).length);
         let next: GameState = {
           ...game,
           money: game.money - cost,
-          buildings: [{ ...b, floors: newFloor, flats }],
+          buildings: [...game.buildings, building],
         };
-        next = addLog(next, 'good', CS.toasts.floorBought(newFloor));
-        set({ game: next });
+        next = addLog(next, 'milestone', CS.sidliste.plotBought(CS.sites[count].name));
+        set({ game: next, activeBuilding: count });
       },
 
       buyUpgrade: (id) => {
@@ -131,36 +160,29 @@ export const useGame = create<PanelakStore>()(
         set({ game: next });
       },
 
-      repairElevator: () => {
+      repairElevator: (bIdx) => {
         const { game } = get();
-        const b = mainBuilding(game);
+        const b = game.buildings[bIdx];
+        if (!b) return;
         const cost = elevatorRepairCost(b.floors);
         if (!b.elevatorBroken || game.money < cost) return;
-        let next: GameState = {
-          ...game,
-          money: game.money - cost,
-          buildings: [{ ...b, elevatorBroken: false }],
-        };
+        const buildings = game.buildings.map((bb, i) =>
+          i === bIdx ? { ...bb, elevatorBroken: false } : bb,
+        );
+        let next: GameState = { ...game, money: game.money - cost, buildings };
         next = addLog(next, 'good', CS.toasts.elevatorFixed);
         set({ game: next });
       },
 
       repairProblem: (flatIndex) => {
         const { game } = get();
-        const b = mainBuilding(game);
-        const flat = b.flats.find((f) => f.index === flatIndex);
+        const flat = allFlats(game).find((f) => f.index === flatIndex);
         if (!flat?.problem) return;
         const cost = PROBLEM_DEFS[flat.problem].repairCost;
         if (game.money < cost) return;
-        const flats = b.flats.map((f) =>
-          f.index === flatIndex ? { ...f, problem: null } : f,
-        );
         const text = CS.problems[flat.problem].fixed(CS.ui.flatLabel(flatIndex + 1));
-        let next: GameState = {
-          ...game,
-          money: game.money - cost,
-          buildings: [{ ...b, flats }],
-        };
+        let next: GameState = { ...game, money: game.money - cost };
+        next = updateFlat(next, flatIndex, (f) => ({ ...f, problem: null }));
         next = addLog(next, 'good', text);
         set({ game: next });
       },
@@ -180,7 +202,7 @@ export const useGame = create<PanelakStore>()(
 
       hireCaretaker: () => {
         const { game } = get();
-        if (game.caretakerHired || mainBuilding(game).floors < CARETAKER_MIN_FLOORS) return;
+        if (game.caretakerHired || !game.buildings.some((b) => b.floors >= CARETAKER_MIN_FLOORS)) return;
         let next: GameState = { ...game, caretakerHired: true };
         next = addLog(next, 'good', CS.toasts.caretakerHired);
         set({ game: next });
@@ -196,7 +218,7 @@ export const useGame = create<PanelakStore>()(
 
       requestEviction: (flatIndex) => {
         const { game } = get();
-        const flat = mainBuilding(game).flats.find((f) => f.index === flatIndex);
+        const flat = allFlats(game).find((f) => f.index === flatIndex);
         const t = flat?.tenant;
         if (!t || t.evictionAt !== null) return;
         if (t.archetype === 'pensioner') {
@@ -269,7 +291,7 @@ export const useGame = create<PanelakStore>()(
       privatize: () => {
         const { game } = get();
         if (!privatizaceAvailable(game)) return;
-        set({ game: applyPrestige(game), offlineSummary: null });
+        set({ game: applyPrestige(game), offlineSummary: null, activeBuilding: 0 });
       },
 
       resolveChoice: (optionId) => {
@@ -298,7 +320,7 @@ export const useGame = create<PanelakStore>()(
         });
       },
 
-      newGame: () => set({ game: createInitialState(), offlineSummary: null }),
+      newGame: () => set({ game: createInitialState(), offlineSummary: null, activeBuilding: 0 }),
     }),
     {
       name: 'panelak-tycoon-save',

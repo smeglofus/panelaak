@@ -42,7 +42,8 @@ export default function TenantCard({ flat, onClose }: Props) {
               <strong>{t.name}</strong>
               <span className="card-archetype">
                 {CS.archetypes[t.archetype].label} · {CS.ui.flatLabel(flat.index + 1)} ·{' '}
-                {CS.ui.floorLabel(flat.floor)}
+                {CS.ui.floorLabel(flat.floor)} ·{' '}
+                {CS.sites[game.buildings[flat.bldg].site].name}
               </span>
             </div>
           </div>

@@ -15,7 +15,10 @@ export default function App() {
   const offlineSummary = useGame((s) => s.offlineSummary);
   const helpOpen = useGame((s) => s.helpOpen);
   const setHelpOpen = useGame((s) => s.setHelpOpen);
+  const activeBuilding = useGame((s) => s.activeBuilding);
+  const setActiveBuilding = useGame((s) => s.setActiveBuilding);
   const [selectedFlat, setSelectedFlat] = useState<number | null>(null);
+  const bIdx = Math.min(activeBuilding, game.buildings.length - 1);
 
   // The single 1000 ms game loop (spec §4). The store skips ticks while a
   // modal (choice / offline summary / help) is open.
@@ -32,7 +35,7 @@ export default function App() {
 
   const flat =
     selectedFlat !== null
-      ? game.buildings[0].flats.find((f) => f.index === selectedFlat)
+      ? game.buildings.flatMap((b) => b.flats).find((f) => f.index === selectedFlat)
       : undefined;
 
   return (
@@ -56,9 +59,25 @@ export default function App() {
       </header>
       <main className="layout">
         <section className="scene">
+          {game.buildings.length > 1 && (
+            <div className="building-tabs">
+              {game.buildings.map((b, i) => (
+                <button
+                  type="button"
+                  key={i}
+                  className={`building-tab${i === bIdx ? ' building-tab-active' : ''}`}
+                  onClick={() => setActiveBuilding(i)}
+                >
+                  {CS.sites[b.site].name}
+                  {b.elevatorBroken && ' ⚠️'}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="scene-sky">
             <Building
               game={game}
+              bIdx={bIdx}
               selected={selectedFlat}
               onSelectFlat={(i) => setSelectedFlat((cur) => (cur === i ? null : i))}
             />

@@ -46,10 +46,19 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   responzivní breakpointy pro tablet i telefon
 - *(odloženo do v0.5)* Kádrový posudek — achievementy přežívající prestiž
 
-## v0.5 „Sídliště“
+## v0.5 „Sídliště“ *(hotovo)*
 
-- Druhý a další panelák s modifikátory (u fabriky, u lesa), meta-správa
-- Mobilní layout, zvuky, anglický toggle — dosah
+- Až **tři paneláky**: po dostavění 8 pater lze koupit parcelu **U Fabriky**
+  (+15 % nájmu, rychlejší nastěhování, −5 spokojenosti) a **U Lesa**
+  (+8 spokojenosti, −5 % nájmu, pomalejší nastěhování); přepínání taby ve scéně,
+  opravy a eventy fungují per budova
+- **Kádrový posudek** — 8 odznaků (Úderník, Prověřený, Budovatel…), přežívají
+  privatizaci a každý nese kupón
+
+## v0.6 (další)
+
+- Zvuky (výtah, sídlištní ambient), anglický toggle — dosah
+- Více questů a eventů, balanc endgame
 
 ## Průběžně
 

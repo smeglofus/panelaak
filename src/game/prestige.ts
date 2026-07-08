@@ -34,6 +34,7 @@ export function applyPrestige(s: GameState, seed?: number): GameState {
     prestigeLevel: s.meta.prestigeLevel + 1,
     kupony: s.meta.kupony + earned,
     perks: s.meta.perks,
+    badges: s.meta.badges, // kádrový posudek survives every era
   };
   let next = createInitialState(seed, meta);
   next = addLog(next, 'milestone', CS.prestige.done(earned));

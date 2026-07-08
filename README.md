@@ -68,6 +68,10 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   and once the calendar hits **1990** you can privatize the house — a
   prestige reset that pays **kupóny** for permanent perks (cheaper concrete,
   committee connections, family silver…) plus +5 % rent per era.
+- Finish all 8 floors and OPBH allots another plot: up to **three paneláky**
+  (U Fabriky pays more but smokes, U Lesa is idyllic but remote), switched
+  with tabs above the scene. The **kádrový posudek** tracks 8 badges that
+  survive every privatization — each worth a kupón.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

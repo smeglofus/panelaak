@@ -9,12 +9,13 @@ import FlatCell from './FlatCell';
 
 interface Props {
   game: GameState;
+  bIdx: number;
   selected: number | null;
   onSelectFlat: (index: number) => void;
 }
 
-export default function Building({ game, selected, onSelectFlat }: Props) {
-  const b = game.buildings[0];
+export default function Building({ game, bIdx, selected, onSelectFlat }: Props) {
+  const b = game.buildings[bIdx];
   const hasElevator = isElevatorRelevant(b);
   const buyFloor = useGame((s) => s.buyFloor);
   const nextCost = floorCost(b.floors, game.meta.perks.beton);
@@ -27,7 +28,7 @@ export default function Building({ game, selected, onSelectFlat }: Props) {
           type="button"
           className="buy-floor"
           disabled={game.money < nextCost}
-          onClick={buyFloor}
+          onClick={() => buyFloor(bIdx)}
         >
           🏗️ {CS.ui.buyFloor} · {formatKcs(nextCost)}
         </button>
@@ -85,8 +86,10 @@ export default function Building({ game, selected, onSelectFlat }: Props) {
             </div>
           )}
           <div className="entrance">
-            <div className="house-number">{CS.ui.houseNumber}</div>
-            {game.milestones.vzornyDum && <div className="plaque">{CS.ui.plaque}</div>}
+            <div className="house-number">{bIdx === 0 ? CS.ui.houseNumber : `${bIdx + 1}/E`}</div>
+            {bIdx === 0 && game.milestones.vzornyDum && (
+              <div className="plaque">{CS.ui.plaque}</div>
+            )}
             <div className="canopy" />
             <div className="door" />
           </div>

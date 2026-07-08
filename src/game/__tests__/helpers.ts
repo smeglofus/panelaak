@@ -10,16 +10,30 @@ export function freshState(seed: number = TEST_SEED): GameState {
   return createInitialState(seed);
 }
 
-/** Replace the building with `floors` floors of empty flats. */
+/** Replace the buildings with a single `floors`-floor building of empty flats. */
 export function withFloors(s: GameState, floors: number): GameState {
   const flats: Flat[] = [];
   for (let floor = 1; floor <= floors; floor++) {
     for (let i = 0; i < FLATS_PER_FLOOR; i++) {
-      flats.push(createFlat(flats.length, floor));
+      flats.push(createFlat(flats.length, floor, 0));
     }
   }
-  const building: Building = { floors, flats, elevatorBroken: false };
+  const building: Building = { floors, flats, elevatorBroken: false, site: 0 };
   return { ...s, buildings: [building] };
+}
+
+/** Append a second building on the given site with empty flats. */
+export function withSecondBuilding(s: GameState, site: number, floors = 1): GameState {
+  const start = s.buildings.flatMap((b) => b.flats).length;
+  const bIdx = s.buildings.length;
+  const flats: Flat[] = [];
+  for (let floor = 1; floor <= floors; floor++) {
+    for (let i = 0; i < FLATS_PER_FLOOR; i++) {
+      flats.push(createFlat(start + flats.length, floor, bIdx));
+    }
+  }
+  const building: Building = { floors, flats, elevatorBroken: false, site };
+  return { ...s, buildings: [...s.buildings, building] };
 }
 
 export function makeTenant(overrides: Partial<Tenant> & { archetype?: ArchetypeId } = {}): Tenant {

@@ -3,6 +3,7 @@
 
 import type {
   ArchetypeId,
+  BadgeId,
   CourtyardId,
   MilestoneId,
   PerkId,
@@ -168,6 +169,7 @@ export const CS = {
       'Čas plyne: v zimě se topí (a studí radiátory), 1. července bývá odstávka. Bony od veksláka uplatníte v Tuzexu.',
       'Nepohodlného nájemníka lze vystěhovat — za peníze, reputaci a 60 vteřin úředního řízení. Paní Vlastu ne.',
       'Peníze nikdy nejsou zbytečné: Modernizace zvyšuje nájem donekonečna. A od roku 1990 lze dům zprivatizovat — začnete znovu s kupóny a trvalými výhodami.',
+      'Po dostavění osmi pater přidělí OPBH další parcelu — sídliště až o třech domech, každý s jinou povahou. Odznaky v kádrovém posudku přežijí všechno.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -273,7 +275,7 @@ export const CS = {
       `${name} vrací klíče od bytu (${flat}). Prý „se to nedalo vydržet“.`,
     floorBought: (floor: number) => `Přistavěno ${floor}. patro. Beton ještě schne.`,
     upgradeBought: (name: string) => `Pořízeno: ${name}.`,
-    elevatorBroke: 'Výtah se porouchal. Zase.',
+    elevatorBroke: (site: string) => `Výtah (${site}) se porouchal. Zase.`,
     elevatorFixed: 'Výtah opraven. Drží to izolepou, ale jede.',
     leak: (flat: string) => `V bytě praskla trubka (${flat}). Instalatér má dovolenou.`,
     musicianMoveIn: 'Do domu se nastěhovala kultura. Reputace stoupá.',
@@ -447,6 +449,81 @@ export const CS = {
     perksTitle: 'Trvalé výhody (za kupóny)',
     level: (n: number) => `úroveň ${n}`,
     maxed: 'MAX',
+  },
+
+  sites: [
+    {
+      name: 'Jiráskova 7',
+      desc: 'Původní dům. Standard, na který jsou soudruzi zvyklí.',
+      factor: '',
+    },
+    {
+      name: 'U Fabriky',
+      desc: '+15 % nájemného, rychlejší nastěhování — ale kouř z komínů (−5 spokojenosti).',
+      factor: 'Kouř z fabriky',
+    },
+    {
+      name: 'U Lesa',
+      desc: 'Klid a vzduch (+8 spokojenosti), ale daleko od zastávky: −5 % nájmu, pomalejší nastěhování.',
+      factor: 'Les za domem',
+    },
+  ],
+
+  sidliste: {
+    title: 'Sídliště',
+    buyPlot: (name: string, kcs: string) => `Koupit parcelu ${name} (${kcs})`,
+    needFullHouse: 'Další parcelu OPBH přidělí, až bude stávající dům plně vystavěn (8 pater).',
+    complete: 'Sídliště je kompletní. Tři domy, jeden správce, žádný klid.',
+    plotBought: (name: string) =>
+      `Přidělena parcela ${name}. Bagry přijely hned — to se hned tak nevidí.`,
+  },
+
+  badges: {
+    udernik: {
+      label: 'Úderník',
+      desc: '250 směn v Akci Z.',
+      toast: 'Kádrový posudek: ÚDERNÍK. 250 směn v Akci Z. Ruka jako lopata, +1 kupón.',
+    },
+    provereny: {
+      label: 'Prověřený',
+      desc: 'Přežít 5 návštěv StB.',
+      toast: 'Kádrový posudek: PROVĚŘENÝ. Pátá návštěva StB a pořád tady. +1 kupón.',
+    },
+    plnyDum: {
+      label: 'Plný dům',
+      desc: 'Všech 16 bytů obsazeno.',
+      toast: 'Kádrový posudek: PLNÝ DŮM. Šestnáct bytů, šestnáct příběhů. +1 kupón.',
+    },
+    milionar: {
+      label: 'Socialistický milionář',
+      desc: 'Vydělat celkem 1 000 000 Kčs.',
+      toast: 'Kádrový posudek: MILIONÁŘ. Milión korun. Oficiálně neexistujete. +1 kupón.',
+    },
+    prezimoval: {
+      label: 'Přezimoval',
+      desc: 'Přežít celou topnou sezónu.',
+      toast: 'Kádrový posudek: PŘEZIMOVAL. Radiátory studily, dům stojí. +1 kupón.',
+    },
+    budovatel: {
+      label: 'Budovatel sídliště',
+      desc: 'Spravovat tři paneláky najednou.',
+      toast: 'Kádrový posudek: BUDOVATEL. Tři domy, jedna síťovka klíčů. +1 kupón.',
+    },
+    vzorny: {
+      label: 'Vzorný správce',
+      desc: 'Získat titul Vzorný dům socialistické péče.',
+      toast: 'Kádrový posudek: VZORNÝ SPRÁVCE. Cedule nelže. +1 kupón.',
+    },
+    kapitalista: {
+      label: 'Kupónový kapitalista',
+      desc: 'Provést privatizaci.',
+      toast: 'Kádrový posudek: KAPITALISTA. První privatizace se nezapomíná. +1 kupón.',
+    },
+  } satisfies Record<BadgeId, { label: string; desc: string; toast: string }>,
+
+  posudek: {
+    title: 'Kádrový posudek',
+    hint: 'Odznaky přežijí každou privatizaci. Každý nese kupón.',
   },
 
   perks: {

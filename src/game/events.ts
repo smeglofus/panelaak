@@ -10,8 +10,8 @@ import {
   avgHappiness,
   clamp,
   hasArchetype,
+  allFlats,
   isEventActive,
-  mainBuilding,
   mapTenants,
   updateFlat,
   vacateFlat,
@@ -80,7 +80,7 @@ export const EVENTS: readonly GameEventDef[] = [
         const next = { ...s, reputation: clamp(s.reputation + REP_KSC_PRAISE, 0, 100) };
         return addLog(next, 'good', CS.events.kscSvazak);
       }
-      const inBadShape = avgHappiness(s) < 50 || mainBuilding(s).elevatorBroken;
+      const inBadShape = avgHappiness(s) < 50 || s.buildings.some((b) => b.elevatorBroken);
       if (inBadShape) {
         const fine = Math.round(
           clamp(Math.round(s.money * KSC_FINE_RATE), KSC_FINE_MIN, KSC_FINE_MAX) * fineMult(s),
@@ -101,10 +101,11 @@ export const EVENTS: readonly GameEventDef[] = [
     weight: 12,
     condition: (s) => hasArchetype(s, 'vekslak') || hasArchetype(s, 'disident'),
     apply: (s, rng) => {
-      const suspects = mainBuilding(s).flats.filter(
+      const suspects = allFlats(s).filter(
         (f) => f.tenant?.archetype === 'vekslak' || f.tenant?.archetype === 'disident',
       );
       const flat = rng.pick(suspects);
+      s = { ...s, stats: { ...s.stats, stbVisits: s.stats.stbVisits + 1 } };
       if (flat.tenant!.archetype === 'disident') {
         if (rng.chance(0.5)) {
           const name = flat.tenant!.name;
@@ -115,7 +116,7 @@ export const EVENTS: readonly GameEventDef[] = [
           return addLog(next, 'event', CS.events.stbDisidentGone(name));
         }
         const next = mapTenants(s, (t, f) =>
-          f.floor === flat.floor
+          f.bldg === flat.bldg && f.floor === flat.floor
             ? { ...t, happiness: clamp(t.happiness - MEJDAN_HAPPINESS_HIT, 0, 100) }
             : t,
         );
@@ -141,14 +142,14 @@ export const EVENTS: readonly GameEventDef[] = [
     weight: 14,
     condition: (s) => hasArchetype(s, 'drunk'),
     apply: (s, rng) => {
-      const drunkFlats = mainBuilding(s).flats.filter((f) => f.tenant?.archetype === 'drunk');
-      const floor = rng.pick(drunkFlats).floor;
+      const drunkFlats = allFlats(s).filter((f) => f.tenant?.archetype === 'drunk');
+      const spot = rng.pick(drunkFlats);
       const next = mapTenants(s, (t, f) =>
-        f.floor === floor
+        f.bldg === spot.bldg && f.floor === spot.floor
           ? { ...t, happiness: clamp(t.happiness - MEJDAN_HAPPINESS_HIT, 0, 100) }
           : t,
       );
-      return addLog(next, 'bad', CS.events.mejdan(floor));
+      return addLog(next, 'bad', CS.events.mejdan(spot.floor));
     },
   },
   {
@@ -187,9 +188,9 @@ export const EVENTS: readonly GameEventDef[] = [
   {
     id: 'melouch',
     weight: 10,
-    condition: (s) => mainBuilding(s).flats.some((f) => f.problem === 'leak'),
+    condition: (s) => allFlats(s).some((f) => f.problem === 'leak'),
     apply: (s, rng) => {
-      const leaky = mainBuilding(s).flats.filter((f) => f.problem === 'leak');
+      const leaky = allFlats(s).filter((f) => f.problem === 'leak');
       const target = rng.pick(leaky);
       const next = updateFlat(s, target.index, (f) => ({ ...f, problem: null }));
       return addLog(next, 'good', CS.events.melouch(CS.ui.flatLabel(target.index + 1)));
@@ -226,14 +227,14 @@ export const EVENTS: readonly GameEventDef[] = [
     weight: 10,
     condition: (s) => hasArchetype(s, 'kutil'),
     apply: (s, rng) => {
-      const kutilFlats = mainBuilding(s).flats.filter((f) => f.tenant?.archetype === 'kutil');
-      const floor = rng.pick(kutilFlats).floor;
+      const kutilFlats = allFlats(s).filter((f) => f.tenant?.archetype === 'kutil');
+      const spot = rng.pick(kutilFlats);
       const next = mapTenants(s, (t, f) =>
-        f.floor === floor && t.archetype !== 'kutil'
+        f.bldg === spot.bldg && f.floor === spot.floor && t.archetype !== 'kutil'
           ? { ...t, happiness: clamp(t.happiness - VRTANI_HIT, 0, 100) }
           : t,
       );
-      return addLog(next, 'bad', CS.events.vrtani(floor));
+      return addLog(next, 'bad', CS.events.vrtani(spot.floor));
     },
   },
   {
@@ -241,9 +242,9 @@ export const EVENTS: readonly GameEventDef[] = [
     weight: 9,
     condition: (s) =>
       s.courtyard.piskoviste &&
-      mainBuilding(s).flats.some((f) => f.tenant && !f.problem),
+      allFlats(s).some((f) => f.tenant && !f.problem),
     apply: (s, rng) => {
-      const candidates = mainBuilding(s).flats.filter((f) => f.tenant && !f.problem);
+      const candidates = allFlats(s).filter((f) => f.tenant && !f.problem);
       const target = rng.pick(candidates);
       const next = updateFlat(s, target.index, (f) => ({ ...f, problem: 'window' as const }));
       return addLog(
@@ -282,7 +283,7 @@ export const EVENTS: readonly GameEventDef[] = [
   {
     id: 'trabant',
     weight: 8,
-    condition: (s) => !s.courtyard.garaz && mainBuilding(s).floors >= 2,
+    condition: (s) => !s.courtyard.garaz && s.buildings.some((b) => b.floors >= 2),
     apply: (s) => {
       const next = { ...s, reputation: clamp(s.reputation + REP_TRABANT, 0, 100) };
       return addLog(next, 'bad', CS.events.trabant);
@@ -321,9 +322,9 @@ export const EVENTS: readonly GameEventDef[] = [
     id: 'prosba',
     weight: 12,
     condition: (s) =>
-      s.pendingChoice === null && mainBuilding(s).flats.some((f) => f.tenant),
+      s.pendingChoice === null && allFlats(s).some((f) => f.tenant),
     apply: (s, rng) => {
-      const occupied = mainBuilding(s).flats.filter((f) => f.tenant);
+      const occupied = allFlats(s).filter((f) => f.tenant);
       const flat = rng.pick(occupied);
       const requestId = REQUEST_BY_ARCHETYPE[flat.tenant!.archetype] ?? 'zarovka';
       const def = REQUEST_DEFS[requestId];
@@ -362,9 +363,9 @@ const bumpTenant = (s: GameState, flatIndex: number, delta: number): GameState =
   );
 
 const bumpFloorOthers = (s: GameState, flatIndex: number, delta: number): GameState => {
-  const floor = mainBuilding(s).flats.find((f) => f.index === flatIndex)!.floor;
+  const spot = allFlats(s).find((f) => f.index === flatIndex)!;
   return mapTenants(s, (t, f) =>
-    f.floor === floor && f.index !== flatIndex
+    f.bldg === spot.bldg && f.floor === spot.floor && f.index !== flatIndex
       ? { ...t, happiness: clamp(t.happiness + delta, 0, 100) }
       : t,
   );

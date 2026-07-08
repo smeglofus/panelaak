@@ -22,12 +22,24 @@ export type RepeatableId = 'renovace' | 'naradi';
 /** Permanent perks bought with privatizační kupóny; survive every prestige. */
 export type PerkId = 'beton' | 'konexe' | 'stribro' | 'povest' | 'rucicky';
 
+/** Kádrový posudek badges — earned once, survive every prestige. */
+export type BadgeId =
+  | 'udernik'
+  | 'provereny'
+  | 'plnyDum'
+  | 'milionar'
+  | 'prezimoval'
+  | 'budovatel'
+  | 'vzorny'
+  | 'kapitalista';
+
 export interface Meta {
   /** How many times the house has been privatized ("éra"). */
   prestigeLevel: number;
   /** Unspent privatizační kupóny. */
   kupony: number;
   perks: Record<PerkId, number>;
+  badges: Record<BadgeId, boolean>;
 }
 
 /** Permanent Tuzex purchases (paid in bony). Káva is a repeatable consumable. */
@@ -60,10 +72,12 @@ export interface Tenant {
 }
 
 export interface Flat {
-  /** Unique, stable index (also drives the deterministic plaster weathering). */
+  /** Globally unique index across all buildings (drives weathering too). */
   index: number;
   /** 1-based floor number; ground floor (entrance, kočárkárna) is not a flat row. */
   floor: number;
+  /** Index into GameState.buildings — a flat knows its panelák. */
+  bldg: number;
   tenant: Tenant | null;
   problem: ProblemId | null;
 }
@@ -72,6 +86,8 @@ export interface Building {
   floors: number;
   flats: Flat[];
   elevatorBroken: boolean;
+  /** Index into the SITES table (location + its modifiers). */
+  site: number;
 }
 
 export interface ActiveEvent {
@@ -110,6 +126,9 @@ export interface GameStats {
   moveOuts: number;
   eventsFired: number;
   breakdowns: number;
+  /** Lifetime-of-era counters feeding the kádrový posudek. */
+  brigadeClicks: number;
+  stbVisits: number;
 }
 
 export interface GameState {

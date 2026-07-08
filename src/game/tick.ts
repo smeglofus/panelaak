@@ -1,24 +1,28 @@
 // The pure 1-second tick reducer (spec §5). No React, no Date.now(), no
 // Math.random() — all randomness comes from the seed in GameState, so
-// tick(state) is fully deterministic.
+// tick(state) is fully deterministic. Since v0.5 the world is a sídliště:
+// every phase runs across all buildings.
 
-import type { Flat, GameState, MilestoneId } from './types';
+import type { BadgeId, Flat, GameState, MilestoneId } from './types';
 import { createRng, type Rng } from './rng';
 import { CS } from './content.cs';
 import { createTenant } from './tenants';
-import { processEvents } from './events';
+import { processEvents, majChoice } from './events';
 import { dateFromTick, dateJustReached, isSummer, isWinter } from './calendar';
 import {
   addLog,
-  avgHappiness,
+  allFlats,
   clamp,
   isEventActive,
   mainBuilding,
   mapTenants,
   occupiedCount,
+  occupiedIn,
+  totalFloors,
   updateFlat,
 } from './state';
 import {
+  BADGE_KUPON_REWARD,
   BRIGADE_ENERGY_MAX,
   BRIGADE_ENERGY_REGEN,
   CARETAKER_FIX_CHANCE,
@@ -48,9 +52,11 @@ import {
   LAUNDRY_REGEN_MULT_WEST,
   LAVICKY_PENSIONER_BONUS,
   LEAK_CHANCE,
+  MAX_BUILDINGS,
   MAX_FLOORS,
   MILESTONE_BONY,
   MILESTONE_REWARDS,
+  MILIONAR_EARNED,
   MOVE_OUT_GRACE_SECONDS,
   MOVE_OUT_HAPPINESS_THRESHOLD,
   moveInChance,
@@ -60,23 +66,25 @@ import {
   PENSIONER_NEIGHBOR_DRAG,
   PISKOVISTE_FAMILY_BONUS,
   PROBLEM_DEFS,
+  PROVERENY_STB_VISITS,
   RADIATOR_CHANCE,
   REP_MILESTONE,
   REP_MOVE_IN,
   REP_MOVE_OUT,
   SATELLITE_TARGET_BONUS,
+  SITES,
   SUMMER_TARGET_BONUS,
   SUSAK_TARGET_BONUS,
   SVAZAK_NEIGHBOR_DRAG,
   TENANT_STARTING_HAPPINESS,
   TV_TARGET_BONUS,
+  UDERNIK_CLICKS,
   VANOCE_HAPPINESS_BONUS,
   VEKSLAK_BON_CHANCE,
   VZORNY_DUM_HAPPINESS,
   WINTER_TARGET_PENALTY,
   ZAHONKY_TARGET_BONUS,
 } from './economy';
-import { majChoice } from './events';
 
 export interface HappinessFactor {
   label: string;
@@ -84,7 +92,7 @@ export interface HappinessFactor {
 }
 
 function hasNeighbor(s: GameState, flat: Flat, archetype: string): boolean {
-  return mainBuilding(s).flats.some(
+  return s.buildings[flat.bldg].flats.some(
     (f) =>
       f.index !== flat.index &&
       f.floor === flat.floor &&
@@ -97,7 +105,7 @@ function hasNeighbor(s: GameState, flat: Flat, archetype: string): boolean {
  * the same list drives the simulation and the tenant-card diagnostics.
  */
 export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
-  const b = mainBuilding(s);
+  const b = s.buildings[flat.bldg];
   const t = flat.tenant;
   const factors: HappinessFactor[] = [];
   const F = CS.factors;
@@ -105,6 +113,11 @@ export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
   const date = dateFromTick(s.tick);
   if (isWinter(date)) factors.push({ label: F.winter, delta: -WINTER_TARGET_PENALTY });
   if (isSummer(date)) factors.push({ label: F.summer, delta: SUMMER_TARGET_BONUS });
+
+  const site = SITES[b.site];
+  if (site.targetDelta !== 0) {
+    factors.push({ label: CS.sites[b.site].factor, delta: site.targetDelta });
+  }
 
   if (s.upgrades.satellite) factors.push({ label: F.satellite, delta: SATELLITE_TARGET_BONUS });
   if (s.tuzex.tv) factors.push({ label: F.tv, delta: TV_TARGET_BONUS });
@@ -155,8 +168,8 @@ export function happinessTarget(s: GameState, flat: Flat): number {
 }
 
 function updateHappiness(s: GameState): GameState {
-  const b = mainBuilding(s);
   return mapTenants(s, (t, f) => {
+    const b = s.buildings[f.bldg];
     const target = happinessTarget(s, f);
     let rate = HAPPINESS_DRIFT_RATE;
     if (target > t.happiness && s.upgrades.laundry) {
@@ -181,15 +194,13 @@ function collectRent(s: GameState): GameState {
 }
 
 function processMoveOuts(s: GameState): GameState {
-  for (const flat of mainBuilding(s).flats) {
+  for (const flat of allFlats(s)) {
     const t = flat.tenant;
     if (!t || t.archetype === 'pensioner') continue; // paní Vlasta never leaves
     if (t.unhappySince !== null && s.tick - t.unhappySince >= MOVE_OUT_GRACE_SECONDS) {
-      const b = mainBuilding(s);
-      const flats = b.flats.map((f) => (f.index === flat.index ? { ...f, tenant: null } : f));
+      s = updateFlat(s, flat.index, (f) => ({ ...f, tenant: null }));
       s = {
         ...s,
-        buildings: [{ ...b, flats }],
         reputation: clamp(s.reputation + REP_MOVE_OUT, 0, 100),
         stats: { ...s.stats, moveOuts: s.stats.moveOuts + 1 },
       };
@@ -199,28 +210,37 @@ function processMoveOuts(s: GameState): GameState {
   return s;
 }
 
+/** Filed evictions complete after the řízení runs its course. */
+function processEvictions(s: GameState): GameState {
+  for (const flat of allFlats(s)) {
+    const t = flat.tenant;
+    if (t?.evictionAt != null && s.tick >= t.evictionAt) {
+      s = updateFlat(s, flat.index, (f) => ({ ...f, tenant: null }));
+      s = { ...s, stats: { ...s.stats, moveOuts: s.stats.moveOuts + 1 } };
+      s = addLog(s, 'info', CS.toasts.evictionDone(t.name, CS.ui.flatLabel(flat.index + 1)));
+    }
+  }
+  return s;
+}
+
 function processMoveIns(s: GameState, rng: Rng): GameState {
-  for (const flat of mainBuilding(s).flats) {
+  for (const flat of allFlats(s)) {
     if (flat.tenant) continue;
     const earlyBoost =
       occupiedCount(s) < EARLY_MOVE_IN_MAX_OCCUPIED ? EARLY_MOVE_IN_BOOST : 1;
-    if (!rng.chance(moveInChance(s.reputation) * earlyBoost)) continue;
+    const siteMult = SITES[s.buildings[flat.bldg].site].moveInMult;
+    if (!rng.chance(moveInChance(s.reputation) * earlyBoost * siteMult)) continue;
     const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS, s.tick);
-    const b = mainBuilding(s);
-    const flats = b.flats.map((f) => (f.index === flat.index ? { ...f, tenant } : f));
+    s = updateFlat(s, flat.index, (f) => ({ ...f, tenant }));
     s = {
       ...s,
-      buildings: [{ ...b, flats }],
       nextTenantId: s.nextTenantId + 1,
       reputation: clamp(s.reputation + REP_MOVE_IN, 0, 100),
       stats: { ...s.stats, moveIns: s.stats.moveIns + 1 },
     };
     s = addLog(s, 'good', CS.toasts.moveIn(tenant.name, CS.ui.flatLabel(flat.index + 1)));
     if (tenant.archetype === 'musician') {
-      s = {
-        ...s,
-        reputation: clamp(s.reputation + MUSICIAN_MOVE_IN_REP, 0, 100),
-      };
+      s = { ...s, reputation: clamp(s.reputation + MUSICIAN_MOVE_IN_REP, 0, 100) };
       s = addLog(s, 'good', CS.toasts.musicianMoveIn);
     }
   }
@@ -228,42 +248,42 @@ function processMoveIns(s: GameState, rng: Rng): GameState {
 }
 
 function processBreakdowns(s: GameState, rng: Rng): GameState {
-  const b = mainBuilding(s);
+  for (let bi = 0; bi < s.buildings.length; bi++) {
+    const b = s.buildings[bi];
+    if (b.floors >= ELEVATOR_MIN_FLOORS && !b.elevatorBroken) {
+      const chance =
+        ELEVATOR_BREAK_CHANCE * (s.upgrades.elevatorNdr ? ELEVATOR_NDR_BREAK_MULT : 1);
+      if (rng.chance(chance)) {
+        const buildings = s.buildings.map((bb, i) =>
+          i === bi ? { ...bb, elevatorBroken: true } : bb,
+        );
+        s = {
+          ...s,
+          buildings,
+          stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 },
+        };
+        s = addLog(s, 'bad', CS.toasts.elevatorBroke(CS.sites[b.site].name));
+      }
+    }
 
-  if (b.floors >= ELEVATOR_MIN_FLOORS && !b.elevatorBroken) {
-    const chance = ELEVATOR_BREAK_CHANCE * (s.upgrades.elevatorNdr ? ELEVATOR_NDR_BREAK_MULT : 1);
-    if (rng.chance(chance)) {
-      s = {
-        ...s,
-        buildings: [{ ...b, elevatorBroken: true }],
-        stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 },
-      };
-      s = addLog(s, 'bad', CS.toasts.elevatorBroke);
+    if (rng.chance(LEAK_CHANCE)) {
+      const candidates = s.buildings[bi].flats.filter((f) => f.tenant && !f.problem);
+      if (candidates.length > 0) {
+        const target = rng.pick(candidates);
+        s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'leak' as const }));
+        s = { ...s, stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 } };
+        s = addLog(s, 'bad', CS.toasts.leak(CS.ui.flatLabel(target.index + 1)));
+      }
     }
   }
-
-  if (rng.chance(LEAK_CHANCE)) {
-    const candidates = mainBuilding(s).flats.filter((f) => f.tenant && !f.problem);
-    if (candidates.length > 0) {
-      const target = rng.pick(candidates);
-      s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'leak' as const }));
-      s = {
-        ...s,
-        stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 },
-      };
-      s = addLog(s, 'bad', CS.toasts.leak(CS.ui.flatLabel(target.index + 1)));
-    }
-  }
-
   return s;
 }
 
 /** Archetype one-offs and passives that run on the clock. */
 function processQuirks(s: GameState, rng: Rng): GameState {
-  // Kutil quietly fixes a leak now and then.
-  const hasKutil = mainBuilding(s).flats.some((f) => f.tenant?.archetype === 'kutil');
+  const hasKutil = allFlats(s).some((f) => f.tenant?.archetype === 'kutil');
   if (hasKutil && rng.chance(KUTIL_FIX_CHANCE)) {
-    const leaky = mainBuilding(s).flats.filter((f) => f.problem === 'leak');
+    const leaky = allFlats(s).filter((f) => f.problem === 'leak');
     if (leaky.length > 0) {
       const target = rng.pick(leaky);
       s = updateFlat(s, target.index, (f) => ({ ...f, problem: null }));
@@ -271,8 +291,7 @@ function processQuirks(s: GameState, rng: Rng): GameState {
     }
   }
 
-  // Disident who survives long enough proves the house holds together.
-  for (const flat of mainBuilding(s).flats) {
+  for (const flat of allFlats(s)) {
     const t = flat.tenant;
     if (
       t?.archetype === 'disident' &&
@@ -291,27 +310,27 @@ function processQuirks(s: GameState, rng: Rng): GameState {
   return s;
 }
 
-/** Pan Fanda: takes a wage, fixes what is broken — eventually, if funds allow. */
+/** Pan Fanda covers the whole sídliště: wage, then fixes what funds allow. */
 function processCaretaker(s: GameState, rng: Rng): GameState {
   if (!s.caretakerHired) return s;
 
   s = { ...s, money: Math.max(0, s.money - CARETAKER_WAGE_PER_SEC) };
   const fixChance = CARETAKER_FIX_CHANCE * (s.tuzex.digitalky ? DIGITALKY_FIX_MULT : 1);
 
-  const b = mainBuilding(s);
-  if (b.elevatorBroken) {
+  for (let bi = 0; bi < s.buildings.length; bi++) {
+    const b = s.buildings[bi];
+    if (!b.elevatorBroken) continue;
     const cost = elevatorRepairCost(b.floors);
     if (s.money >= cost && rng.chance(fixChance)) {
-      s = {
-        ...s,
-        money: s.money - cost,
-        buildings: [{ ...mainBuilding(s), elevatorBroken: false }],
-      };
+      const buildings = s.buildings.map((bb, i) =>
+        i === bi ? { ...bb, elevatorBroken: false } : bb,
+      );
+      s = { ...s, money: s.money - cost, buildings };
       s = addLog(s, 'good', CS.toasts.caretakerElevator(formatKcs(cost)));
     }
   }
 
-  for (const flat of mainBuilding(s).flats) {
+  for (const flat of allFlats(s)) {
     if (!flat.problem) continue;
     const cost = PROBLEM_DEFS[flat.problem].repairCost;
     if (s.money < cost || !rng.chance(fixChance)) continue;
@@ -327,22 +346,9 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
   return s;
 }
 
-/** Filed evictions complete after the řízení runs its course. */
-function processEvictions(s: GameState): GameState {
-  for (const flat of mainBuilding(s).flats) {
-    const t = flat.tenant;
-    if (t?.evictionAt != null && s.tick >= t.evictionAt) {
-      s = updateFlat(s, flat.index, (f) => ({ ...f, tenant: null }));
-      s = { ...s, stats: { ...s.stats, moveOuts: s.stats.moveOuts + 1 } };
-      s = addLog(s, 'info', CS.toasts.evictionDone(t.name, CS.ui.flatLabel(flat.index + 1)));
-    }
-  }
-  return s;
-}
-
 /** Vekslák leaves the occasional envelope. Don't ask. */
 function processBony(s: GameState, rng: Rng): GameState {
-  const vekslaks = mainBuilding(s).flats.filter((f) => f.tenant?.archetype === 'vekslak').length;
+  const vekslaks = allFlats(s).filter((f) => f.tenant?.archetype === 'vekslak').length;
   for (let i = 0; i < vekslaks; i++) {
     if (rng.chance(VEKSLAK_BON_CHANCE)) {
       s = { ...s, bony: s.bony + 1 };
@@ -355,13 +361,12 @@ function processBony(s: GameState, rng: Rng): GameState {
 /** Heating season, radiator failures and fixed dates: odstávka, Vánoce, 1. máj. */
 function processCalendar(s: GameState, rng: Rng): GameState {
   const date = dateFromTick(s.tick);
-  const b = mainBuilding(s);
 
   if (isWinter(date)) {
-    s = { ...s, money: Math.max(0, s.money - HEATING_COST_PER_FLOOR * b.floors) };
+    s = { ...s, money: Math.max(0, s.money - HEATING_COST_PER_FLOOR * totalFloors(s)) };
 
     if (rng.chance(RADIATOR_CHANCE)) {
-      const candidates = mainBuilding(s).flats.filter((f) => f.tenant && !f.problem);
+      const candidates = allFlats(s).filter((f) => f.tenant && !f.problem);
       if (candidates.length > 0) {
         const target = rng.pick(candidates);
         s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'radiator' as const }));
@@ -406,22 +411,28 @@ const MILESTONE_DEFS: readonly MilestoneDef[] = [
   {
     id: 'firstFullFloor',
     achieved: (s) => {
-      const byFloor = new Map<number, number>();
-      for (const f of mainBuilding(s).flats) {
-        if (f.tenant) byFloor.set(f.floor, (byFloor.get(f.floor) ?? 0) + 1);
+      const byFloor = new Map<string, number>();
+      for (const f of allFlats(s)) {
+        if (f.tenant) {
+          const key = `${f.bldg}:${f.floor}`;
+          byFloor.set(key, (byFloor.get(key) ?? 0) + 1);
+        }
       }
       return [...byFloor.values()].some((n) => n >= FLATS_PER_FLOOR);
     },
   },
   { id: 'first1000', achieved: (s) => s.totalEarned >= 1000 },
   { id: 'elevatorInstalled', achieved: (s) => mainBuilding(s).floors >= ELEVATOR_MIN_FLOORS },
-  { id: 'eightFloors', achieved: (s) => mainBuilding(s).floors >= MAX_FLOORS },
+  { id: 'eightFloors', achieved: (s) => s.buildings.some((b) => b.floors >= MAX_FLOORS) },
   {
     id: 'vzornyDum',
-    achieved: (s) =>
-      mainBuilding(s).floors >= MAX_FLOORS &&
-      occupiedCount(s) === MAX_FLOORS * FLATS_PER_FLOOR &&
-      avgHappiness(s) >= VZORNY_DUM_HAPPINESS,
+    achieved: (s) => {
+      const b = mainBuilding(s);
+      if (b.floors < MAX_FLOORS || occupiedIn(b) < MAX_FLOORS * FLATS_PER_FLOOR) return false;
+      const tenants = b.flats.filter((f) => f.tenant);
+      const avg = tenants.reduce((sum, f) => sum + f.tenant!.happiness, 0) / tenants.length;
+      return avg >= VZORNY_DUM_HAPPINESS;
+    },
   },
 ];
 
@@ -444,6 +455,46 @@ function checkMilestones(s: GameState): GameState {
         `${CS.milestones[def.id].toast} ${CS.ui.milestoneReward(formatKcs(reward))}`,
       );
       if (bony > 0) s = addLog(s, 'good', CS.toasts.bonyAwarded(bony));
+    }
+  }
+  return s;
+}
+
+interface BadgeDef {
+  id: BadgeId;
+  achieved: (s: GameState) => boolean;
+}
+
+/** Kádrový posudek — earned once, kept through every privatizace. */
+const BADGE_DEFS: readonly BadgeDef[] = [
+  { id: 'udernik', achieved: (s) => s.stats.brigadeClicks >= UDERNIK_CLICKS },
+  { id: 'provereny', achieved: (s) => s.stats.stbVisits >= PROVERENY_STB_VISITS },
+  {
+    id: 'plnyDum',
+    achieved: (s) => {
+      const b = mainBuilding(s);
+      return occupiedIn(b) >= MAX_FLOORS * FLATS_PER_FLOOR;
+    },
+  },
+  { id: 'milionar', achieved: (s) => s.totalEarned >= MILIONAR_EARNED },
+  { id: 'prezimoval', achieved: (s) => dateFromTick(s.tick).month === 3 },
+  { id: 'budovatel', achieved: (s) => s.buildings.length >= MAX_BUILDINGS },
+  { id: 'vzorny', achieved: (s) => s.milestones.vzornyDum },
+  { id: 'kapitalista', achieved: (s) => s.meta.prestigeLevel >= 1 },
+];
+
+function checkBadges(s: GameState): GameState {
+  for (const def of BADGE_DEFS) {
+    if (!s.meta.badges[def.id] && def.achieved(s)) {
+      s = {
+        ...s,
+        meta: {
+          ...s.meta,
+          badges: { ...s.meta.badges, [def.id]: true },
+          kupony: s.meta.kupony + BADGE_KUPON_REWARD,
+        },
+      };
+      s = addLog(s, 'milestone', CS.badges[def.id].toast);
     }
   }
   return s;
@@ -472,6 +523,7 @@ export function tick(prev: GameState): GameState {
   s = processCalendar(s, rng);
   s = processEvents(s, rng);
   s = checkMilestones(s);
+  s = checkBadges(s);
 
   return { ...s, rngSeed: rng.state() };
 }
