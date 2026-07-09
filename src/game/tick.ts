@@ -190,7 +190,14 @@ function updateHappiness(s: GameState): GameState {
 
 function collectRent(s: GameState): GameState {
   const income = incomePerSec(s);
-  return { ...s, money: s.money + income, totalEarned: s.totalEarned + income };
+  s = { ...s, money: s.money + income, totalEarned: s.totalEarned + income };
+  if (income > s.meta.records.bestIncomePerSec + 0.01) {
+    s = {
+      ...s,
+      meta: { ...s.meta, records: { ...s.meta.records, bestIncomePerSec: income } },
+    };
+  }
+  return s;
 }
 
 function processMoveOuts(s: GameState): GameState {
@@ -439,6 +446,16 @@ const MILESTONE_DEFS: readonly MilestoneDef[] = [
 function checkMilestones(s: GameState): GameState {
   for (const def of MILESTONE_DEFS) {
     if (!s.milestones[def.id] && def.achieved(s)) {
+      if (
+        def.id === 'vzornyDum' &&
+        (s.meta.records.fastestVzornyTicks === null ||
+          s.tick < s.meta.records.fastestVzornyTicks)
+      ) {
+        s = {
+          ...s,
+          meta: { ...s.meta, records: { ...s.meta.records, fastestVzornyTicks: s.tick } },
+        };
+      }
       const reward = MILESTONE_REWARDS[def.id];
       const bony = MILESTONE_BONY[def.id];
       s = {
@@ -492,6 +509,10 @@ function checkBadges(s: GameState): GameState {
           ...s.meta,
           badges: { ...s.meta.badges, [def.id]: true },
           kupony: s.meta.kupony + BADGE_KUPON_REWARD,
+          records: {
+            ...s.meta.records,
+            kuponyEarnedTotal: s.meta.records.kuponyEarnedTotal + BADGE_KUPON_REWARD,
+          },
         },
       };
       s = addLog(s, 'milestone', CS.badges[def.id].toast);

@@ -191,6 +191,79 @@ button {
     linear-gradient(100deg, transparent 46%, #8a8a7c 47%, #93937f 52%, transparent 53%);
 }
 
+/* --- Seasons (the calendar paints the scene) ---------------------------------- */
+
+.scene-summer {
+  background: linear-gradient(#8fb0c4, #d3dbc9);
+}
+
+.scene-summer .scene-ground {
+  background: linear-gradient(to bottom, #b0b0a1 0, #a0a091 14px, #5f7a42 14px, #536d38 100%);
+  background-color: #536d38;
+}
+
+.scene-autumn {
+  background: linear-gradient(#8b98a3, #c4c3b4);
+}
+
+.scene-autumn .scene-ground {
+  background: linear-gradient(to bottom, #a5a598 0, #969688 14px, #75683f 14px, #695d38 100%);
+  background-color: #695d38;
+}
+
+.scene-winter {
+  background: linear-gradient(#7d8fa3, #c2cbd1);
+}
+
+.scene-winter .scene-ground {
+  background: linear-gradient(to bottom, #c9ced2 0, #bcc2c6 14px, #e3e8eb 14px, #d5dcdf 100%);
+  background-color: #d5dcdf;
+}
+
+.scene-winter .scene-ground::after {
+  opacity: 0.25;
+  filter: grayscale(0.7);
+}
+
+/* Snow caps on the flat roof and the elevator machine room. */
+.scene-winter .roof {
+  box-shadow: inset 0 4px 0 #eef2f4, 0 4px 3px rgba(0, 0, 0, 0.18);
+}
+
+.scene-winter .machine-room {
+  border-top: 3px solid #eef2f4;
+}
+
+.scene-winter .cy-sand {
+  background: #e8ecee;
+}
+
+.scene-winter .cy-beds div {
+  background: linear-gradient(#c9ced2, #b5bcc0);
+}
+
+.snowfall {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.7;
+  background-image:
+    radial-gradient(#fff 1.2px, transparent 1.7px),
+    radial-gradient(rgba(255, 255, 255, 0.7) 1px, transparent 1.5px);
+  background-size: 90px 90px, 140px 140px;
+  animation: snowfall 11s linear infinite;
+}
+
+@keyframes snowfall {
+  from {
+    background-position: 0 0, 60px 40px;
+  }
+  to {
+    background-position: 27px 720px, 95px 880px;
+  }
+}
+
 /* --- Building -------------------------------------------------------------- */
 
 .building-wrap {
@@ -1131,15 +1204,44 @@ button {
   font-weight: 600;
 }
 
+.panel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 12px 16px 16px;
+}
+
 .btn-newgame {
-  margin: 12px 16px 16px;
-  align-self: flex-start;
   background: none;
   border: none;
   color: var(--red);
   text-decoration: underline;
   cursor: pointer;
   font-size: 12px;
+  padding: 0;
+}
+
+.records {
+  list-style: none;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.records li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.records span {
+  color: #6e685a;
+}
+
+.records strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* --- Tenant card ------------------------------------------------------------ */

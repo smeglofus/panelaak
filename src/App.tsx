@@ -10,6 +10,7 @@ import TenantCard from './components/TenantCard';
 import HelpModal from './components/HelpModal';
 import Courtyard from './components/Courtyard';
 import { isMuted, setMuted } from './sound';
+import { dateFromTick, seasonKey } from './game/calendar';
 
 export default function App() {
   const game = useGame((s) => s.game);
@@ -22,6 +23,7 @@ export default function App() {
   const setLanguage = useGame((s) => s.setLanguage);
   const [selectedFlat, setSelectedFlat] = useState<number | null>(null);
   const [muted, setMutedState] = useState(isMuted());
+  const season = seasonKey(dateFromTick(game.tick));
   const bIdx = Math.min(activeBuilding, game.buildings.length - 1);
 
   // The single 1000 ms game loop (spec §4). The store skips ticks while a
@@ -81,7 +83,8 @@ export default function App() {
         </div>
       </header>
       <main className="layout">
-        <section className="scene">
+        <section className={`scene scene-${season}`}>
+          {season === 'winter' && <div className="snowfall" />}
           {game.buildings.length > 1 && (
             <div className="building-tabs">
               {game.buildings.map((b, i) => (

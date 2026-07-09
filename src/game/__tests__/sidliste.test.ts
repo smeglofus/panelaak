@@ -108,6 +108,6 @@ describe('migration v6', () => {
     expect(migrated.meta.badges.udernik).toBe(false);
     expect(migrated.meta.kupony).toBe(3);
     expect(migrated.stats.brigadeClicks).toBe(0);
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
   });
 });

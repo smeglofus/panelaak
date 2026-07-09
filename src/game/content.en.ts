@@ -535,6 +535,25 @@ export const EN: typeof CS = {
     hint: 'Badges survive every privatization. Each carries a kupón.',
   },
 
+  sinSlavy: {
+    title: 'Hall of fame',
+    fastestVzorny: 'Fastest Model House',
+    richestEra: 'Richest era',
+    bestIncome: 'Best income',
+    kuponyTotal: 'Kupóny earned in total',
+    none: '—',
+  },
+
+  save: {
+    export: 'Back up save',
+    import: 'Restore from backup',
+    exportDone: 'Backup copied to clipboard. Store it with the family silver.',
+    exportPrompt: 'Copy your backup (Ctrl+C):',
+    importPrompt: 'Paste your backup:',
+    importFail: 'Could not read the backup. It is damaged, or from a newer build.',
+    importDone: 'Save restored. Welcome back, comrade administrator.',
+  },
+
   perks: {
     beton: {
       name: 'Better concrete',

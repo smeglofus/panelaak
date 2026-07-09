@@ -76,6 +76,10 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   Czech, that's the identity), procedural **sound effects** via Web Audio
   (no asset files, mutable with 🔊), and elections, funfairs and furniture
   moving among the events.
+- The calendar paints the scene: **snow on the roof in winter** (with
+  snowfall), greener summers, brown autumns. A **hall of fame** tracks
+  records across eras, and the save can be **exported/imported** as a
+  clipboard-friendly blob. CI attaches an itch.io-ready web zip.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

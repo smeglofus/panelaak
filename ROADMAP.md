@@ -66,9 +66,20 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   králíkárna směnaře
 - **Balanc**: větší sídliště = rušnější sídliště (+30 % eventů za další dům)
 
-## v0.7 (nápady)
+## v0.7 „Čtyři roční období“ *(hotovo)*
 
-- Sprite/pixel-art pass, Steam/itch packaging (Tauri), leaderboard bez backendu?
+- **Sezónní scéna** — kalendář maluje svět: v zimě sníh na střeše, zavátý
+  dvorek a sněžení, léto zelenější, podzim hnědne. (Místo plného pixel-art
+  passu — spec sám varoval, že art je scope killer; CSS panelák je identita.)
+- **Síň slávy** — osobní rekordy přes všechny éry: nejrychlejší Vzorný dům,
+  rekordní výdělek éry, rekordní příjem, kupóny celkem
+- **Záloha savu** — export/import přes schránku (base64, verzované, migruje se)
+- **itch.io balíček** — CI přikládá web zip jako artefakt + butler šablona
+  (Steam/Tauri odloženo — HTML5 na itch je pragmatická distribuce)
+
+## Nápady dál
+
+- Tauri desktop build pro Steam, pixel-art jako alternativní skin, další questy
 
 ## Průběžně
 

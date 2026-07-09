@@ -33,6 +33,18 @@ export type BadgeId =
   | 'vzorny'
   | 'kapitalista';
 
+/** Personal records — the síň slávy. Survive every prestige. */
+export interface EraRecords {
+  /** Ticks to the Vzorný dům title, best era; null until first achieved. */
+  fastestVzornyTicks: number | null;
+  /** Highest totalEarned an era ended with. */
+  richestEraEarned: number;
+  /** Best income per second ever seen. */
+  bestIncomePerSec: number;
+  /** All kupóny ever earned (privatizace + badges). */
+  kuponyEarnedTotal: number;
+}
+
 export interface Meta {
   /** How many times the house has been privatized ("éra"). */
   prestigeLevel: number;
@@ -40,6 +52,7 @@ export interface Meta {
   kupony: number;
   perks: Record<PerkId, number>;
   badges: Record<BadgeId, boolean>;
+  records: EraRecords;
 }
 
 /** Permanent Tuzex purchases (paid in bony). Káva is a repeatable consumable. */

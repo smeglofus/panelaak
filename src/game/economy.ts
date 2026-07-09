@@ -407,6 +407,15 @@ export function formatKcsPerSec(n: number): string {
   return `${formatNumberCs(n, 1)}${NBSP}Kčs/s`;
 }
 
+/** Compact duration: "2 h 05 min" or "7 min 30 s". */
+export function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const sec = Math.floor(seconds % 60);
+  if (h > 0) return `${h}${NBSP}h${NBSP}${String(m).padStart(2, '0')}${NBSP}min`;
+  return `${m}${NBSP}min${NBSP}${String(sec).padStart(2, '0')}${NBSP}s`;
+}
+
 export function isElevatorRelevant(building: Building): boolean {
   return building.floors >= ELEVATOR_MIN_FLOORS;
 }

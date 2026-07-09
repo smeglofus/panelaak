@@ -19,6 +19,23 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      # itch.io-ready web build (HTML5 upload) — grab it from the run artifacts
+      - run: cd dist && zip -r ../panelak-tycoon-web.zip .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: panelak-tycoon-web
+          path: panelak-tycoon-web.zip
+
+      # --- Publish to itch.io via butler (template) --------------------------
+      # Set the BUTLER_API_KEY secret and uncomment:
+      # - uses: manleydev/butler-publish-itchio-action@master
+      #   env:
+      #     BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
+      #     CHANNEL: html5
+      #     ITCH_GAME: panelak-tycoon
+      #     ITCH_USER: smeglofus
+      #     PACKAGE: panelak-tycoon-web.zip
+
   docker:
     runs-on: ubuntu-latest
     needs: build-test

@@ -25,6 +25,7 @@ import {
   createBuilding,
   createFlat,
   createInitialState,
+  decodeSave,
   mapTenants,
   migrateSave,
   SAVE_VERSION,
@@ -81,6 +82,7 @@ interface PanelakStore {
   buyPrestigePerk: (id: PerkId) => void;
   privatize: () => void;
   resolveChoice: (optionId: string) => void;
+  importSave: (raw: string) => boolean;
   dismissOffline: () => void;
   applyOfflineProgress: () => void;
   newGame: () => void;
@@ -319,6 +321,17 @@ export const useGame = create<PanelakStore>()(
       resolveChoice: (optionId) => {
         const { game } = get();
         set({ game: resolveChoice(game, optionId) });
+      },
+
+      importSave: (raw) => {
+        const game = decodeSave(raw);
+        if (!game) return false;
+        set({
+          game: { ...game, lastSaved: Date.now() },
+          offlineSummary: null,
+          activeBuilding: 0,
+        });
+        return true;
       },
 
       dismissOffline: () => set({ offlineSummary: null }),

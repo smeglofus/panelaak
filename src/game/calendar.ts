@@ -92,3 +92,11 @@ export function seasonEmoji(date: GameDate): string {
   if (isSummer(date)) return '☀️';
   return date.month <= 5 ? '🌱' : '🍂';
 }
+
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+
+export function seasonKey(date: GameDate): Season {
+  if (isWinter(date)) return 'winter';
+  if (isSummer(date)) return 'summer';
+  return date.month <= 5 ? 'spring' : 'autumn';
+}

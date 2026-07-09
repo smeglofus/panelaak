@@ -22,7 +22,16 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
+
+export function createDefaultRecords(): Meta['records'] {
+  return {
+    fastestVzornyTicks: null,
+    richestEraEarned: 0,
+    bestIncomePerSec: 0,
+    kuponyEarnedTotal: 0,
+  };
+}
 
 export function createDefaultBadges(): Meta['badges'] {
   return {
@@ -43,6 +52,7 @@ export function createDefaultMeta(): Meta {
     kupony: 0,
     perks: { beton: 0, konexe: 0, stribro: 0, povest: 0, rucicky: 0 },
     badges: createDefaultBadges(),
+    records: createDefaultRecords(),
   };
 }
 
@@ -284,5 +294,37 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
       })),
     };
   }
+  if (fromVersion < 7) {
+    // v7 added the síň slávy records.
+    g = {
+      ...g,
+      version: 7,
+      meta: { ...g.meta, records: g.meta.records ?? createDefaultRecords() },
+    };
+  }
   return g;
+}
+
+// --- Save export/import ---------------------------------------------------------
+
+/** Base64-encoded JSON — unicode-safe, mildly tamper-discouraging. */
+export function encodeSave(game: GameState): string {
+  return btoa(unescape(encodeURIComponent(JSON.stringify({ v: game.version, game }))));
+}
+
+/** Returns the migrated game state, or null when the blob is unreadable. */
+export function decodeSave(raw: string): GameState | null {
+  try {
+    const json = decodeURIComponent(escape(atob(raw.trim())));
+    const parsed = JSON.parse(json) as { v?: number; game?: GameState };
+    const game = parsed.game;
+    if (!game || !Array.isArray(game.buildings) || typeof game.money !== 'number') {
+      return null;
+    }
+    const version = parsed.v ?? game.version ?? 1;
+    if (version > SAVE_VERSION) return null; // from a newer build — refuse politely
+    return migrateSave(game, version);
+  } catch {
+    return null;
+  }
 }

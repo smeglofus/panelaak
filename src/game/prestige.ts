@@ -35,6 +35,11 @@ export function applyPrestige(s: GameState, seed?: number): GameState {
     kupony: s.meta.kupony + earned,
     perks: s.meta.perks,
     badges: s.meta.badges, // kádrový posudek survives every era
+    records: {
+      ...s.meta.records,
+      richestEraEarned: Math.max(s.meta.records.richestEraEarned, Math.floor(s.totalEarned)),
+      kuponyEarnedTotal: s.meta.records.kuponyEarnedTotal + earned,
+    },
   };
   let next = createInitialState(seed, meta);
   next = addLog(next, 'milestone', CS.prestige.done(earned));

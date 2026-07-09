@@ -554,6 +554,25 @@ export const CS = {
     hint: 'Odznaky přežijí každou privatizaci. Každý nese kupón.',
   },
 
+  sinSlavy: {
+    title: 'Síň slávy',
+    fastestVzorny: 'Nejrychlejší Vzorný dům',
+    richestEra: 'Rekordní výdělek éry',
+    bestIncome: 'Rekordní příjem',
+    kuponyTotal: 'Kupónů celkem získáno',
+    none: '—',
+  },
+
+  save: {
+    export: 'Záloha savu',
+    import: 'Obnovit ze zálohy',
+    exportDone: 'Záloha zkopírována do schránky. Uložte si ji někam k rodinnému stříbru.',
+    exportPrompt: 'Zkopírujte si zálohu (Ctrl+C):',
+    importPrompt: 'Vložte zálohu:',
+    importFail: 'Zálohu se nepodařilo přečíst. Je poškozená, nebo z novější verze hry.',
+    importDone: 'Save obnoven. Vítejte zpátky, soudruhu správce.',
+  },
+
   perks: {
     beton: {
       name: 'Lepší beton',

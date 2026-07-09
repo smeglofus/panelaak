@@ -8,9 +8,11 @@ import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/stat
 import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
 import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
 import { play } from '../sound';
+import { encodeSave } from '../game/state';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
+  formatDuration,
   CARETAKER_MIN_FLOORS,
   CARETAKER_WAGE_PER_SEC,
   COURTYARD_COSTS,
@@ -46,7 +48,32 @@ export default function SidePanel() {
   const buyPlot = useGame((s) => s.buyPlot);
   const hireCaretaker = useGame((s) => s.hireCaretaker);
   const fireCaretaker = useGame((s) => s.fireCaretaker);
+  const importSave = useGame((s) => s.importSave);
   const newGame = useGame((s) => s.newGame);
+
+  const records = game.meta.records;
+  const anyRecord =
+    records.fastestVzornyTicks !== null ||
+    records.richestEraEarned > 0 ||
+    records.kuponyEarnedTotal > 0;
+
+  const handleExport = () => {
+    const blob = encodeSave(game);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(blob)
+        .then(() => window.alert(CS.save.exportDone))
+        .catch(() => window.prompt(CS.save.exportPrompt, blob));
+    } else {
+      window.prompt(CS.save.exportPrompt, blob);
+    }
+  };
+
+  const handleImport = () => {
+    const raw = window.prompt(CS.save.importPrompt);
+    if (!raw) return;
+    window.alert(importSave(raw) ? CS.save.importDone : CS.save.importFail);
+  };
 
   const problems = allFlats(game).filter((f) => f.problem);
   const brokenElevators = game.buildings
@@ -391,6 +418,38 @@ export default function SidePanel() {
         </section>
       )}
 
+      {anyRecord && (
+        <section className="panel-section">
+          <h3>{CS.sinSlavy.title}</h3>
+          <ul className="records">
+            <li>
+              <span>{CS.sinSlavy.fastestVzorny}</span>
+              <strong>
+                {records.fastestVzornyTicks !== null
+                  ? formatDuration(records.fastestVzornyTicks)
+                  : CS.sinSlavy.none}
+              </strong>
+            </li>
+            <li>
+              <span>{CS.sinSlavy.richestEra}</span>
+              <strong>
+                {records.richestEraEarned > 0
+                  ? formatKcs(records.richestEraEarned)
+                  : CS.sinSlavy.none}
+              </strong>
+            </li>
+            <li>
+              <span>{CS.sinSlavy.bestIncome}</span>
+              <strong>{formatKcsPerSec(records.bestIncomePerSec)}</strong>
+            </li>
+            <li>
+              <span>{CS.sinSlavy.kuponyTotal}</span>
+              <strong>{records.kuponyEarnedTotal}</strong>
+            </li>
+          </ul>
+        </section>
+      )}
+
       <section className="panel-section">
         <h3>{CS.posudek.title}</h3>
         <ul className="milestones">
@@ -437,15 +496,23 @@ export default function SidePanel() {
         )}
       </section>
 
-      <button
-        type="button"
-        className="btn-newgame"
-        onClick={() => {
-          if (window.confirm(CS.ui.newGameConfirm)) newGame();
-        }}
-      >
-        {CS.ui.newGame}
-      </button>
+      <div className="panel-footer">
+        <button type="button" className="btn-newgame" onClick={handleExport}>
+          {CS.save.export}
+        </button>
+        <button type="button" className="btn-newgame" onClick={handleImport}>
+          {CS.save.import}
+        </button>
+        <button
+          type="button"
+          className="btn-newgame"
+          onClick={() => {
+            if (window.confirm(CS.ui.newGameConfirm)) newGame();
+          }}
+        >
+          {CS.ui.newGame}
+        </button>
+      </div>
     </aside>
   );
 }
