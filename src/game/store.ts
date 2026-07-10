@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CourtyardId, GameState, PerkId, RepeatableId, TuzexId, UpgradeId } from './types';
+import type { CourtyardId, GameState, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveChoice } from './events';
 import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
@@ -41,10 +41,14 @@ import {
   floorCost,
   KAVA_COST_BONY,
   KAVA_HAPPINESS_BONUS,
+  FLAT_RENO_MAX,
+  flatRenoCost,
   MAX_BUILDINGS,
   MAX_FLOORS,
   PLOT_COSTS,
   PROBLEM_DEFS,
+  PROJECT_COSTS,
+  PROJECT_ORDER,
   REP_EVICTION,
   repeatableCost,
   TUZEX_COSTS,
@@ -79,6 +83,8 @@ interface PanelakStore {
   buyTuzex: (id: TuzexId) => void;
   buyKava: () => void;
   buyRepeatable: (id: RepeatableId) => void;
+  renovateFlat: (flatIndex: number) => void;
+  buyProject: (id: ProjectId) => void;
   buyPrestigePerk: (id: PerkId) => void;
   privatize: () => void;
   resolveChoice: (optionId: string) => void;
@@ -193,7 +199,12 @@ export const useGame = create<PanelakStore>()(
         const buildings = game.buildings.map((bb, i) =>
           i === bIdx ? { ...bb, elevatorBroken: false } : bb,
         );
-        let next: GameState = { ...game, money: game.money - cost, buildings };
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          buildings,
+          stats: { ...game.stats, repairsDone: game.stats.repairsDone + 1 },
+        };
         next = addLog(next, 'good', CS.toasts.elevatorFixed);
         set({ game: next });
       },
@@ -205,7 +216,11 @@ export const useGame = create<PanelakStore>()(
         const cost = PROBLEM_DEFS[flat.problem].repairCost;
         if (game.money < cost) return;
         const text = CS.problems[flat.problem].fixed(CS.ui.flatLabel(flatIndex + 1));
-        let next: GameState = { ...game, money: game.money - cost };
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          stats: { ...game.stats, repairsDone: game.stats.repairsDone + 1 },
+        };
         next = updateFlat(next, flatIndex, (f) => ({ ...f, problem: null }));
         next = addLog(next, 'good', text);
         set({ game: next });
@@ -304,6 +319,38 @@ export const useGame = create<PanelakStore>()(
           'good',
           CS.toasts.repeatableBought(CS.repeatables[id].name, next.repeatables[id]),
         );
+        set({ game: next });
+      },
+
+      renovateFlat: (flatIndex) => {
+        const { game } = get();
+        const flat = allFlats(game).find((f) => f.index === flatIndex);
+        if (!flat || flat.renovation >= FLAT_RENO_MAX) return;
+        const cost = flatRenoCost(flat.renovation);
+        if (game.money < cost) return;
+        let next: GameState = { ...game, money: game.money - cost };
+        next = updateFlat(next, flatIndex, (f) => ({ ...f, renovation: f.renovation + 1 }));
+        next = addLog(
+          next,
+          'good',
+          CS.reno.done(String(flatIndex + 1), flat.renovation + 1),
+        );
+        set({ game: next });
+      },
+
+      buyProject: (id) => {
+        const { game } = get();
+        if (game.projects[id]) return;
+        const order = PROJECT_ORDER.indexOf(id);
+        if (order > 0 && !game.projects[PROJECT_ORDER[order - 1]]) return;
+        const cost = PROJECT_COSTS[id];
+        if (game.money < cost) return;
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          projects: { ...game.projects, [id]: true },
+        };
+        next = addLog(next, 'milestone', CS.projects.built(CS.projects[id].name));
         set({ game: next });
       },
 

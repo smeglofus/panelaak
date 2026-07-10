@@ -138,6 +138,10 @@ export const CS = {
   } satisfies Record<CourtyardId, { name: string; desc: string }>,
 
   factors: {
+    reno: 'Zrekonstruovaný byt',
+    samoobsluha: 'Samoobsluha za rohem',
+    skolka: 'Školka na sídlišti',
+    kulturak: 'Kulturní dům',
     winter: 'Topná sezóna',
     summer: 'Léto na sídlišti',
     radiator: 'Studený radiátor',
@@ -171,6 +175,7 @@ export const CS = {
       'Nepohodlného nájemníka lze vystěhovat — za peníze, reputaci a 60 vteřin úředního řízení. Paní Vlastu ne.',
       'Peníze nikdy nejsou zbytečné: Modernizace zvyšuje nájem donekonečna. A od roku 1990 lze dům zprivatizovat — začnete znovu s kupóny a trvalými výhodami.',
       'Po dostavění osmi pater přidělí OPBH další parcelu — sídliště až o třech domech, každý s jinou povahou. Odznaky v kádrovém posudku přežijí všechno.',
+      'Výbor zadává pětiletkové plány s termínem a odměnou. A když dojde místo, rekonstruujte byty a stavějte: samoobsluhu, školku, kulturní dům.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -298,6 +303,8 @@ export const CS = {
     tuzexBought: (name: string) => `Z Tuzexu dorazilo: ${name}.`,
     repeatableBought: (name: string, level: number) =>
       `${name} — úroveň ${level}. Dům zase o kus lepší.`,
+    kulturakBon:
+      'Z Kulturního domu ukápl bon. Vstupné se cestou do pokladny někde ztratilo.',
     kavaServed:
       'Káva a čokoláda z Tuzexu kolovaly po domě. Celý dům si připadá na úrovni.',
   },
@@ -464,6 +471,8 @@ export const CS = {
     title: 'Privatizace',
     era: (n: number) => `${n}. éra`,
     kupony: (n: number) => `${n} kupónů`,
+    teaser:
+      'Povídá se, že v devadesátém se budou dít věci. Zatím se šetří a staví.',
     rumour: 'Něco se děje. V rádiu, na ulicích, ve frontách. Zatím jen šeptem.',
     available:
       'Doba se změnila. Dům lze zprivatizovat: začnete znovu, ale kupóny a trvalé výhody zůstanou. A každá éra přidává +5 % nájemného.',
@@ -552,6 +561,54 @@ export const CS = {
   posudek: {
     title: 'Kádrový posudek',
     hint: 'Odznaky přežijí každou privatizaci. Každý nese kupón.',
+  },
+
+  plans: {
+    title: 'Pětiletka',
+    none: 'Výbor připravuje nový plán…',
+    daysLeft: (d: number) => `zbývá ${d} dní`,
+    reward: 'Odměna',
+    kuponBonus: '+ kupón',
+    tasks: {
+      earn: (kcs: string) => `Vydělat ${kcs}`,
+      movein: (n: number) => `Ubytovat ${n} nových nájemníků`,
+      fix: (n: number) => `Opravit ${n} závad`,
+      happy: (pct: number, days: number) =>
+        `Držet spokojenost ≥ ${pct} % (celkem ${days} dní)`,
+      brigade: (n: number) => `Odpracovat ${n} směn v Akci Z`,
+    },
+    started: (task: string) => `Nový plán od OV: ${task}. Termín běží.`,
+    done: (task: string, kcs: string) =>
+      `Plán splněn (${task}). Výbor je spokojen, odměna ${kcs}.`,
+    failed: (task: string) => `Plán nesplněn (${task}). Zapsáno.`,
+  },
+
+  projects: {
+    title: 'Výstavba sídliště',
+    locked: 'Nejdřív se musí dokončit předchozí stavba. Plán je plán.',
+    built: (name: string) =>
+      `Slavnostně otevřeno: ${name}. Páska přestřižena, řeč pronesena, chlebíčky snědeny.`,
+    samoobsluha: {
+      name: 'Samoobsluha',
+      desc: '+4 spokojenosti všem. Fronty konečně pod střechou.',
+    },
+    skolka: {
+      name: 'Mateřská školka',
+      desc: 'Rodiny +12 spokojenosti a stěhují se ochotněji (+15 %).',
+    },
+    kulturak: {
+      name: 'Kulturní dům',
+      desc: '+8 spokojenosti všem a občas z něj ukápne bon.',
+    },
+  },
+
+  reno: {
+    title: 'Rekonstrukce bytu',
+    button: (level: number, kcs: string) => `Rekonstrukce na úroveň ${level} (${kcs})`,
+    level: (n: number) => `úroveň ${n}`,
+    max: 'Byt je v nejvyšším standardu. Umakart tu už nenajdete.',
+    done: (flat: string, level: number) =>
+      `Byt ${flat} zrekonstruován na úroveň ${level}. Umakart nahradily obklady.`,
   },
 
   sinSlavy: {

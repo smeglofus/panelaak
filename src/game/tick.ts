@@ -8,6 +8,7 @@ import { createRng, type Rng } from './rng';
 import { CS } from './content.cs';
 import { createTenant } from './tenants';
 import { processEvents, majChoice } from './events';
+import { processPlan } from './plans';
 import { dateFromTick, dateJustReached, isSummer, isWinter } from './calendar';
 import {
   addLog,
@@ -40,6 +41,7 @@ import {
   ELEVATOR_NDR_BREAK_MULT,
   elevatorRepairCost,
   FAMILY_HOT_WATER_EXTRA,
+  FLAT_RENO_TARGET_BONUS,
   FLATS_PER_FLOOR,
   formatKcs,
   HAPPINESS_BASE_TARGET,
@@ -47,6 +49,8 @@ import {
   HEATING_COST_PER_FLOOR,
   HOT_WATER_TARGET_PENALTY,
   incomePerSec,
+  KULTURAK_BON_INTERVAL,
+  KULTURAK_TARGET_BONUS,
   KUTIL_FIX_CHANCE,
   LAUNDRY_REGEN_MULT,
   LAUNDRY_REGEN_MULT_WEST,
@@ -71,8 +75,11 @@ import {
   REP_MILESTONE,
   REP_MOVE_IN,
   REP_MOVE_OUT,
+  SAMOOBSLUHA_TARGET_BONUS,
   SATELLITE_TARGET_BONUS,
   SITES,
+  SKOLKA_FAMILY_BONUS,
+  SKOLKA_MOVE_IN_MULT,
   SUMMER_TARGET_BONUS,
   SUSAK_TARGET_BONUS,
   SVAZAK_NEIGHBOR_DRAG,
@@ -121,6 +128,18 @@ export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
 
   if (s.upgrades.satellite) factors.push({ label: F.satellite, delta: SATELLITE_TARGET_BONUS });
   if (s.tuzex.tv) factors.push({ label: F.tv, delta: TV_TARGET_BONUS });
+  if (flat.renovation > 0) {
+    factors.push({ label: F.reno, delta: FLAT_RENO_TARGET_BONUS * flat.renovation });
+  }
+  if (s.projects.samoobsluha) {
+    factors.push({ label: F.samoobsluha, delta: SAMOOBSLUHA_TARGET_BONUS });
+  }
+  if (s.projects.skolka && t?.archetype === 'family') {
+    factors.push({ label: F.skolka, delta: SKOLKA_FAMILY_BONUS });
+  }
+  if (s.projects.kulturak) {
+    factors.push({ label: F.kulturak, delta: KULTURAK_TARGET_BONUS });
+  }
   if (s.courtyard.zahonky) factors.push({ label: F.zahonky, delta: ZAHONKY_TARGET_BONUS });
   if (s.courtyard.susak) factors.push({ label: F.susak, delta: SUSAK_TARGET_BONUS });
   if (s.courtyard.piskoviste && t?.archetype === 'family') {
@@ -235,7 +254,9 @@ function processMoveIns(s: GameState, rng: Rng): GameState {
     if (flat.tenant) continue;
     const earlyBoost =
       occupiedCount(s) < EARLY_MOVE_IN_MAX_OCCUPIED ? EARLY_MOVE_IN_BOOST : 1;
-    const siteMult = SITES[s.buildings[flat.bldg].site].moveInMult;
+    const siteMult =
+      SITES[s.buildings[flat.bldg].site].moveInMult *
+      (s.projects.skolka ? SKOLKA_MOVE_IN_MULT : 1);
     if (!rng.chance(moveInChance(s.reputation) * earlyBoost * siteMult)) continue;
     const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS, s.tick);
     s = updateFlat(s, flat.index, (f) => ({ ...f, tenant }));
@@ -294,6 +315,7 @@ function processQuirks(s: GameState, rng: Rng): GameState {
     if (leaky.length > 0) {
       const target = rng.pick(leaky);
       s = updateFlat(s, target.index, (f) => ({ ...f, problem: null }));
+      s = { ...s, stats: { ...s.stats, repairsDone: s.stats.repairsDone + 1 } };
       s = addLog(s, 'good', CS.toasts.kutilFix(CS.ui.flatLabel(target.index + 1)));
     }
   }
@@ -333,6 +355,7 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
         i === bi ? { ...bb, elevatorBroken: false } : bb,
       );
       s = { ...s, money: s.money - cost, buildings };
+      s = { ...s, stats: { ...s.stats, repairsDone: s.stats.repairsDone + 1 } };
       s = addLog(s, 'good', CS.toasts.caretakerElevator(formatKcs(cost)));
     }
   }
@@ -347,6 +370,7 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
     );
     s = { ...s, money: s.money - cost };
     s = updateFlat(s, flat.index, (f) => ({ ...f, problem: null }));
+    s = { ...s, stats: { ...s.stats, repairsDone: s.stats.repairsDone + 1 } };
     s = addLog(s, 'good', text);
   }
 
@@ -355,6 +379,10 @@ function processCaretaker(s: GameState, rng: Rng): GameState {
 
 /** Vekslák leaves the occasional envelope. Don't ask. */
 function processBony(s: GameState, rng: Rng): GameState {
+  if (s.projects.kulturak && s.tick % KULTURAK_BON_INTERVAL === 0) {
+    s = { ...s, bony: s.bony + 1 };
+    s = addLog(s, 'good', CS.toasts.kulturakBon);
+  }
   const vekslaks = allFlats(s).filter((f) => f.tenant?.archetype === 'vekslak').length;
   for (let i = 0; i < vekslaks; i++) {
     if (rng.chance(VEKSLAK_BON_CHANCE)) {
@@ -542,6 +570,7 @@ export function tick(prev: GameState): GameState {
   s = processCaretaker(s, rng);
   s = processBony(s, rng);
   s = processCalendar(s, rng);
+  s = processPlan(s, rng);
   s = processEvents(s, rng);
   s = checkMilestones(s);
   s = checkBadges(s);

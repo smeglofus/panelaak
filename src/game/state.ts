@@ -15,6 +15,7 @@ import {
   BRIGADE_ENERGY_COST,
   BRIGADE_ENERGY_MAX,
   brigadeReward,
+  PLAN_FIRST_AT,
   POVEST_START_REP,
   STARTING_MONEY,
   STARTING_REPUTATION,
@@ -22,7 +23,7 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export function createDefaultRecords(): Meta['records'] {
   return {
@@ -59,7 +60,7 @@ export function createDefaultMeta(): Meta {
 const LOG_CAP = 50;
 
 export function createFlat(index: number, floor: number, bldg = 0): Flat {
-  return { index, floor, bldg, tenant: null, problem: null };
+  return { index, floor, bldg, renovation: 0, tenant: null, problem: null };
 }
 
 /** A fresh 1-floor building on the given site; flat indices stay globally unique. */
@@ -107,6 +108,9 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
     caretakerHired: false,
     bony: 0,
     tuzex: { tv: false, pracka: false, digitalky: false },
+    projects: { samoobsluha: false, skolka: false, kulturak: false },
+    plan: null,
+    nextPlanAt: PLAN_FIRST_AT,
     activeEvents: [],
     pendingChoice: null,
     milestones: {
@@ -125,6 +129,7 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
       breakdowns: 0,
       brigadeClicks: 0,
       stbVisits: 0,
+      repairsDone: 0,
     },
     nextTenantId: 2,
     lastSaved: Date.now(),
@@ -300,6 +305,21 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
       ...g,
       version: 7,
       meta: { ...g.meta, records: g.meta.records ?? createDefaultRecords() },
+    };
+  }
+  if (fromVersion < 8) {
+    // v8 added the pětiletka era: plans, flat renovations, mega-projects.
+    g = {
+      ...g,
+      version: 8,
+      projects: { samoobsluha: false, skolka: false, kulturak: false },
+      plan: null,
+      nextPlanAt: g.tick + PLAN_FIRST_AT,
+      stats: { ...g.stats, repairsDone: g.stats.repairsDone ?? 0 },
+      buildings: g.buildings.map((b) => ({
+        ...b,
+        flats: b.flats.map((f) => ({ ...f, renovation: f.renovation ?? 0 })),
+      })),
     };
   }
   return g;

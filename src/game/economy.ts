@@ -10,6 +10,7 @@ import type {
   MilestoneId,
   PerkId,
   ProblemId,
+  ProjectId,
   RepeatableId,
   Tenant,
   TuzexId,
@@ -76,11 +77,12 @@ export function tenantRentPerSec(tenant: Tenant): number {
   return rentPerSec(ARCHETYPES[tenant.archetype].rentMult, tenant.happiness);
 }
 
-/** Rent of one flat including site and courtyard synergies (garage × vekslák). */
+/** Rent of one flat including site, renovation and courtyard synergies. */
 export function flatRentPerSec(state: GameState, flat: Flat): number {
   if (!flat.tenant) return 0;
   let rent = tenantRentPerSec(flat.tenant);
   rent *= SITES[state.buildings[flat.bldg]?.site ?? 0].rentMult;
+  rent *= 1 + FLAT_RENO_RENT_BONUS * flat.renovation;
   if (state.courtyard.garaz && flat.tenant.archetype === 'vekslak') {
     rent *= GARAGE_VEKSLAK_MULT;
   }
@@ -207,6 +209,47 @@ export const RUCICKY_BONUS = 3;
 export function fineMult(state: GameState): number {
   return Math.max(0.5, 1 - KONEXE_DISCOUNT * state.meta.perks.konexe);
 }
+
+// --- Rekonstrukce bytů (per-flat renovation) ---------------------------------------
+
+export const FLAT_RENO_MAX = 3;
+/** Cost of upgrading FROM the given level (index 0 = level 0 → 1). */
+export const FLAT_RENO_COSTS = [800, 1800, 4000];
+export const FLAT_RENO_RENT_BONUS = 0.08;
+export const FLAT_RENO_TARGET_BONUS = 5;
+
+export function flatRenoCost(currentLevel: number): number {
+  return FLAT_RENO_COSTS[currentLevel] ?? Infinity;
+}
+
+// --- Výstavba sídliště (mega-projects) ----------------------------------------------
+
+export const PROJECT_COSTS: Record<ProjectId, number> = {
+  samoobsluha: 150000,
+  skolka: 600000,
+  kulturak: 2500000,
+};
+
+/** Sequential unlock order. */
+export const PROJECT_ORDER: readonly ProjectId[] = ['samoobsluha', 'skolka', 'kulturak'];
+
+export const SAMOOBSLUHA_TARGET_BONUS = 4;
+export const SKOLKA_FAMILY_BONUS = 12;
+export const SKOLKA_MOVE_IN_MULT = 1.15;
+export const KULTURAK_TARGET_BONUS = 8;
+/** The kulturní dům drops a bon this often (seconds). */
+export const KULTURAK_BON_INTERVAL = 240;
+
+// --- Pětiletka (rotating plans) ------------------------------------------------------
+
+/** Pause between plans, seconds. */
+export const PLAN_COOLDOWN = 60;
+/** First plan arrives after this many ticks of a fresh era. */
+export const PLAN_FIRST_AT = 120;
+export const PLAN_FAIL_REP = -3;
+export const PLAN_HAPPY_THRESHOLD = 75;
+/** Chance a plan carries a kupón on top of the usual reward. */
+export const PLAN_KUPON_CHANCE = 0.25;
 
 // --- Kádrový posudek (badges) -----------------------------------------------------
 

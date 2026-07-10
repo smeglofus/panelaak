@@ -437,6 +437,23 @@ button {
   background: var(--window-dark);
 }
 
+/* Renovated flats get visibly nicer window frames (happiness ring stays). */
+.window-reno-1 {
+  border-color: #ece7d5;
+}
+
+.window-reno-2 {
+  border-color: #f2ecd6;
+  border-style: double;
+  border-width: 5px;
+}
+
+.window-reno-3 {
+  border-color: #e0c878;
+  border-style: double;
+  border-width: 5px;
+}
+
 .tenant-emoji {
   position: relative;
   z-index: 1;
@@ -753,6 +770,109 @@ button {
   border-radius: 2px 2px 0 0;
 }
 
+/* Mega-projects standing on the estate green */
+
+.cy-shop {
+  position: relative;
+  width: 110px;
+  height: 44px;
+  background: var(--concrete-dark);
+  border: 1px solid #6a6a63;
+  box-shadow: 5px 4px 0 rgba(25, 28, 24, 0.15);
+}
+
+.cy-shop-sign {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #f0e2c4;
+  background: var(--red);
+  padding: 1px 0;
+}
+
+.cy-shop-glass {
+  position: absolute;
+  bottom: 0;
+  left: 6px;
+  right: 6px;
+  height: 22px;
+  background: linear-gradient(rgba(170, 195, 205, 0.8), rgba(120, 150, 160, 0.8));
+  border: 2px solid #5e5e57;
+  border-bottom: none;
+}
+
+.cy-skolka {
+  position: relative;
+  width: 84px;
+  height: 40px;
+  background: #c9b458;
+  border: 1px solid #a3913f;
+  box-shadow: 5px 4px 0 rgba(25, 28, 24, 0.15);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+
+.cy-skolka-sign {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #5c4a12;
+}
+
+.cy-skolka-window {
+  width: 16px;
+  height: 14px;
+  background: var(--window-lit);
+  border: 2px solid #a3913f;
+}
+
+.cy-kulturak {
+  position: relative;
+  width: 130px;
+  height: 56px;
+  background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.1)), #8f8f88;
+  border: 1px solid #6a6a63;
+  box-shadow: 6px 5px 0 rgba(25, 28, 24, 0.18);
+}
+
+.cy-kulturak-sign {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #f7e7b0;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.cy-kulturak::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 14px;
+  right: 14px;
+  height: 26px;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(170, 195, 205, 0.8) 0 14px,
+    #6a6a63 14px 17px
+  );
+  border-top: 2px solid #6a6a63;
+}
+
 .cy-garage {
   width: 64px;
   height: 42px;
@@ -956,6 +1076,31 @@ button {
 
 .bar-energy {
   background: #1e4f8f;
+}
+
+.bar-plan {
+  background: var(--red);
+}
+
+.panel-plan {
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.plan-task {
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.btn-reno {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  background: #6a5a2e;
+}
+
+.btn-reno:not(:disabled):hover {
+  background: #7d6b38;
 }
 
 .brigade-hint {

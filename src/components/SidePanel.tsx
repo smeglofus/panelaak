@@ -1,12 +1,14 @@
 // The "domovní správa" notice board: money, stats, contextual repairs,
 // upgrades, milestones, new game.
 
-import type { BadgeId, CourtyardId, MilestoneId, PerkId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
+import type { BadgeId, CourtyardId, MilestoneId, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/state';
 import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
 import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
+import { describePlan, planProgress } from '../game/plans';
+import { SECONDS_PER_DAY } from '../game/calendar';
 import { play } from '../sound';
 import { encodeSave } from '../game/state';
 import {
@@ -28,6 +30,8 @@ import {
   PERK_MAX,
   PROBLEM_DEFS,
   PLOT_COSTS,
+  PROJECT_COSTS,
+  PROJECT_ORDER,
   repeatableCost,
   TUZEX_COSTS,
   UPGRADE_COSTS,
@@ -46,6 +50,7 @@ export default function SidePanel() {
   const buyPrestigePerk = useGame((s) => s.buyPrestigePerk);
   const privatize = useGame((s) => s.privatize);
   const buyPlot = useGame((s) => s.buyPlot);
+  const buyProject = useGame((s) => s.buyProject);
   const hireCaretaker = useGame((s) => s.hireCaretaker);
   const fireCaretaker = useGame((s) => s.fireCaretaker);
   const importSave = useGame((s) => s.importSave);
@@ -144,6 +149,36 @@ export default function SidePanel() {
           <span className="energy-value">{Math.round(game.energy)} %</span>
         </div>
         <p className="brigade-hint">{CS.ui.brigadeHint}</p>
+      </section>
+
+      <section className="panel-section panel-plan">
+        <h3>{CS.plans.title}</h3>
+        {game.plan ? (
+          <>
+            <p className="plan-task">{describePlan(game.plan)}</p>
+            <div className="energy-row">
+              <div className="bar">
+                <div
+                  className="bar-fill bar-plan"
+                  style={{
+                    width: `${Math.round((planProgress(game, game.plan) / game.plan.target) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span className="energy-value">
+                {CS.plans.daysLeft(
+                  Math.max(0, Math.ceil((game.plan.deadline - game.tick) / SECONDS_PER_DAY)),
+                )}
+              </span>
+            </div>
+            <p className="brigade-hint">
+              {CS.plans.reward}: {formatKcs(game.plan.rewardKcs)} + ★{game.plan.rewardBony}
+              {game.plan.rewardKupon && ` ${CS.plans.kuponBonus}`}
+            </p>
+          </>
+        ) : (
+          <p className="brigade-hint">{CS.plans.none}</p>
+        )}
       </section>
 
       {anythingBroken && (
@@ -325,6 +360,35 @@ export default function SidePanel() {
       </section>
 
       <section className="panel-section">
+        <h3>{CS.projects.title}</h3>
+        {PROJECT_ORDER.map((id: ProjectId, i) => {
+          const owned = game.projects[id];
+          const locked = i > 0 && !game.projects[PROJECT_ORDER[i - 1]];
+          const cost = PROJECT_COSTS[id];
+          return (
+            <div key={id} className={`upgrade${owned ? ' upgrade-owned' : ''}`}>
+              <div className="upgrade-text">
+                <strong>{CS.projects[id].name}</strong>
+                <span>{locked && !owned ? CS.projects.locked : CS.projects[id].desc}</span>
+              </div>
+              {owned ? (
+                <span className="owned-mark">{CS.ui.owned}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={locked || game.money < cost}
+                  onClick={() => buyProject(id)}
+                >
+                  {formatKcs(cost)}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="panel-section">
         <h3>{CS.sidliste.title}</h3>
         <ul className="sidliste-list">
           {game.buildings.map((bb, i) => (
@@ -356,7 +420,7 @@ export default function SidePanel() {
         )}
       </section>
 
-      {(privatizaceRumoured(game) || game.meta.prestigeLevel > 0 || game.meta.kupony > 0) && (
+      {(
         <section className="panel-section panel-prestige">
           <h3>
             {CS.prestige.title}
@@ -376,7 +440,11 @@ export default function SidePanel() {
               </button>
             </>
           ) : (
-            game.meta.prestigeLevel === 0 && <p className="prestige-info">{CS.prestige.rumour}</p>
+            game.meta.prestigeLevel === 0 && (
+              <p className="prestige-info">
+                {privatizaceRumoured(game) ? CS.prestige.rumour : CS.prestige.teaser}
+              </p>
+            )
           )}
           {(game.meta.prestigeLevel > 0 || game.meta.kupony > 0) && (
             <>

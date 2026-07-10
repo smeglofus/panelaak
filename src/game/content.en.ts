@@ -117,6 +117,10 @@ export const EN: typeof CS = {
   },
 
   factors: {
+    reno: 'Renovated flat',
+    samoobsluha: 'Grocery around the corner',
+    skolka: 'Kindergarten on the estate',
+    kulturak: 'House of Culture',
     winter: 'Heating season',
     summer: 'Summer on the estate',
     radiator: 'Cold radiator',
@@ -150,6 +154,7 @@ export const EN: typeof CS = {
       'An inconvenient tenant can be evicted — for money, reputation and 60 seconds of official proceedings. Not paní Vlasta.',
       'Money never goes to waste: Modernization raises rent forever. And from 1990 you can privatize — start over with kupóny and permanent perks.',
       'Finish eight floors and the housing office allots another plot — an estate of up to three houses, each with its own character. Cadre-file badges survive everything.',
+      'The committee issues five-year-plan tasks with deadlines and rewards. And when you run out of space, renovate flats and build: a grocery, a kindergarten, a House of Culture.',
       'Closing the tab is fine — the house keeps earning at 50 % (8 h cap). The game saves automatically.',
       'The goal: 8 floors, full house, 80 % happiness = the title “Model House of Socialist Care”.',
     ],
@@ -277,6 +282,8 @@ export const EN: typeof CS = {
     tuzexBought: (name: string) => `Delivered from Tuzex: ${name}.`,
     repeatableBought: (name: string, level: number) =>
       `${name} — level ${level}. The house keeps getting better.`,
+    kulturakBon:
+      'A bon dripped out of the House of Culture. The ticket money got lost on the way to the till.',
     kavaServed:
       'Tuzex coffee and chocolate made the rounds. The whole house feels classy.',
   },
@@ -445,6 +452,8 @@ export const EN: typeof CS = {
     title: 'Privatization',
     era: (n: number) => `era ${n}`,
     kupony: (n: number) => `${n} kupóny`,
+    teaser:
+      'Word is that things will happen in ’90. For now: save up and build.',
     rumour: 'Something is happening. On the radio, in the streets, in the queues. Still just whispers.',
     available:
       'The times have changed. The house can be privatized: you start over, but kupóny and permanent perks remain. And every era adds +5 % rent.',
@@ -533,6 +542,54 @@ export const EN: typeof CS = {
   posudek: {
     title: 'Cadre file',
     hint: 'Badges survive every privatization. Each carries a kupón.',
+  },
+
+  plans: {
+    title: 'Five-year plan',
+    none: 'The committee is preparing a new plan…',
+    daysLeft: (d: number) => `${d} days left`,
+    reward: 'Reward',
+    kuponBonus: '+ kupón',
+    tasks: {
+      earn: (kcs: string) => `Earn ${kcs}`,
+      movein: (n: number) => `House ${n} new tenants`,
+      fix: (n: number) => `Fix ${n} breakdowns`,
+      happy: (pct: number, days: number) =>
+        `Keep happiness ≥ ${pct} % (${days} days in total)`,
+      brigade: (n: number) => `Work ${n} shifts in Akce Z`,
+    },
+    started: (task: string) => `New plan from the committee: ${task}. The clock is running.`,
+    done: (task: string, kcs: string) =>
+      `Plan fulfilled (${task}). The committee is satisfied; reward ${kcs}.`,
+    failed: (task: string) => `Plan not fulfilled (${task}). Noted.`,
+  },
+
+  projects: {
+    title: 'Estate construction',
+    locked: 'The previous project must be finished first. The plan is the plan.',
+    built: (name: string) =>
+      `Ceremonially opened: ${name}. Ribbon cut, speech delivered, sandwiches eaten.`,
+    samoobsluha: {
+      name: 'Self-service grocery',
+      desc: '+4 happiness for everyone. The queues finally have a roof.',
+    },
+    skolka: {
+      name: 'Kindergarten',
+      desc: 'Families +12 happiness and they move in more willingly (+15 %).',
+    },
+    kulturak: {
+      name: 'House of Culture',
+      desc: '+8 happiness for everyone, and a bon drips out now and then.',
+    },
+  },
+
+  reno: {
+    title: 'Flat renovation',
+    button: (level: number, kcs: string) => `Renovate to level ${level} (${kcs})`,
+    level: (n: number) => `level ${n}`,
+    max: 'The flat is at the highest standard. No plastic core in sight.',
+    done: (flat: string, level: number) =>
+      `Flat ${flat} renovated to level ${level}. Tiles replaced the plastic core.`,
   },
 
   sinSlavy: {

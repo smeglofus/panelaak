@@ -91,6 +91,8 @@ export interface Flat {
   floor: number;
   /** Index into GameState.buildings — a flat knows its panelák. */
   bldg: number;
+  /** Rekonstrukce level 0–3: more rent, happier tenant, nicer window. */
+  renovation: number;
   tenant: Tenant | null;
   problem: ProblemId | null;
 }
@@ -142,6 +144,31 @@ export interface GameStats {
   /** Lifetime-of-era counters feeding the kádrový posudek. */
   brigadeClicks: number;
   stbVisits: number;
+  /** Repairs completed by anyone — player, pan Fanda or the kutil. */
+  repairsDone: number;
+}
+
+/** Sídliště mega-projects, built once per era, sequential unlock. */
+export type ProjectId = 'samoobsluha' | 'skolka' | 'kulturak';
+
+export type PlanId = 'earn' | 'movein' | 'fix' | 'happy' | 'brigade';
+
+/** One rotating pětiletka assignment from the OV. */
+export interface ActivePlan {
+  id: PlanId;
+  /** What counts as done (Kčs, counts, or accumulated ticks for 'happy'). */
+  target: number;
+  /** Counter value when the plan started (counter-based plans). */
+  baseline: number;
+  /** Accumulated progress for 'happy' (ticks at/above the threshold). */
+  progress: number;
+  /** Required average happiness for 'happy'. */
+  threshold?: number;
+  /** Tick when the plan expires. */
+  deadline: number;
+  rewardKcs: number;
+  rewardBony: number;
+  rewardKupon: boolean;
 }
 
 export interface GameState {
@@ -169,6 +196,12 @@ export interface GameState {
   /** Tuzex vouchers — the rare second currency. */
   bony: number;
   tuzex: Record<TuzexId, boolean>;
+  /** Sídliště mega-projects built this era. */
+  projects: Record<ProjectId, boolean>;
+  /** The current pětiletka assignment, if any. */
+  plan: ActivePlan | null;
+  /** Tick when the next plan may be issued. */
+  nextPlanAt: number;
   activeEvents: ActiveEvent[];
   /** Set while an interactive event (domovní schůze) waits for the player; tick pauses. */
   pendingChoice: PendingChoice | null;

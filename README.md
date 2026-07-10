@@ -80,6 +80,12 @@ Requires Node 18+ for local dev (the Docker build uses Node 20).
   snowfall), greener summers, brown autumns. A **hall of fame** tracks
   records across eras, and the save can be **exported/imported** as a
   clipboard-friendly blob. CI attaches an itch.io-ready web zip.
+- Late game is a game too: the committee issues rotating **five-year-plan
+  tasks** with deadlines and rewards, every flat can be **renovated** to
+  level 3 (better rent, happier tenant, nicer window), and three
+  **mega-projects** — grocery, kindergarten, House of Culture — stand on the
+  estate green once you can afford them. Privatization is visible on the
+  notice board from day one.
 - The elevator exists from the 3rd floor up and breaks down regularly. Hot
   water outages cannot be repaired, only waited out. ("Teplá voda nepoteče.
   Důvod: nepoteče.")

@@ -77,6 +77,16 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
 - **itch.io balíček** — CI přikládá web zip jako artefakt + butler šablona
   (Steam/Tauri odloženo — HTML5 na itch je pragmatická distribuce)
 
+## v0.8 „Pětiletka“ *(hotovo — pozdní hra)*
+
+- **Pětiletkové plány** — pořád běží jeden úkol od OV s termínem, progress barem
+  a odměnou (peníze + bon, občas kupón); nesplnění stojí reputaci
+- **Rekonstrukce bytů** — každý byt na úroveň 1–3 (+8 % nájmu a +5 spokojenosti
+  za úroveň, viditelně lepší okno); 48 bytů = dlouhý ocas rozhodování
+- **Výstavba sídliště** — Samoobsluha (150 t.), Mateřská školka (600 t.),
+  Kulturní dům (2,5 M) — obří cíle viditelné ve scéně
+- Privatizace viditelná od začátku hry (teaser → šeptanda → dostupná)
+
 ## Nápady dál
 
 - Tauri desktop build pro Steam, pixel-art jako alternativní skin, další questy

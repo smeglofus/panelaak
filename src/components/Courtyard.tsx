@@ -6,10 +6,29 @@ import { CS } from '../game/content.cs';
 
 export default function Courtyard({ game }: { game: GameState }) {
   const c = game.courtyard;
-  if (!Object.values(c).some(Boolean)) return null;
+  const p = game.projects;
+  if (!Object.values(c).some(Boolean) && !Object.values(p).some(Boolean)) return null;
 
   return (
     <div className="courtyard">
+      {p.samoobsluha && (
+        <div className="cy-item cy-shop" title={CS.projects.samoobsluha.name}>
+          <span className="cy-shop-sign">{CS.projects.samoobsluha.name.toUpperCase()}</span>
+          <div className="cy-shop-glass" />
+        </div>
+      )}
+      {p.skolka && (
+        <div className="cy-item cy-skolka" title={CS.projects.skolka.name}>
+          <span className="cy-skolka-sign">MŠ</span>
+          <div className="cy-skolka-window" />
+          <div className="cy-skolka-window" />
+        </div>
+      )}
+      {p.kulturak && (
+        <div className="cy-item cy-kulturak" title={CS.projects.kulturak.name}>
+          <span className="cy-kulturak-sign">KULTURNÍ DŮM</span>
+        </div>
+      )}
       {c.piskoviste && (
         <div className="cy-item cy-sandbox" title={CS.courtyard.piskoviste.name}>
           <div className="cy-sand" />

@@ -50,7 +50,7 @@ export default function FlatCell({ flat, selected, onSelect }: Props) {
           : CS.ui.vacantFlat
       }
     >
-      <span className={`window window-${tier}`}>
+      <span className={`window window-${tier} window-reno-${flat.renovation}`}>
         {t && <span className="tenant-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>}
       </span>
       {flat.problem && (

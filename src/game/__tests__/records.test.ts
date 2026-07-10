@@ -65,7 +65,7 @@ describe('síň slávy records', () => {
     const legacy = { ...old, version: 6, meta: legacyMeta as GameState['meta'] };
     const migrated = migrateSave(legacy, 6);
     expect(migrated.meta.records.fastestVzornyTicks).toBeNull();
-    expect(migrated.version).toBe(7);
+    expect(migrated.version).toBe(8);
   });
 });
 

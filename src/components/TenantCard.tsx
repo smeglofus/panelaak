@@ -6,6 +6,8 @@ import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import { ARCHETYPES } from '../game/tenants';
 import {
   EVICTION_COST,
+  FLAT_RENO_MAX,
+  flatRenoCost,
   flatRentPerSec,
   formatKcs,
   formatKcsPerSec,
@@ -24,7 +26,22 @@ export default function TenantCard({ flat, onClose }: Props) {
   const money = game.money;
   const repairProblem = useGame((s) => s.repairProblem);
   const requestEviction = useGame((s) => s.requestEviction);
+  const renovateFlat = useGame((s) => s.renovateFlat);
   const t = flat.tenant;
+
+  const renoButton =
+    flat.renovation >= FLAT_RENO_MAX ? (
+      <p className="brigade-hint">{CS.reno.max}</p>
+    ) : (
+      <button
+        type="button"
+        className="btn btn-reno"
+        disabled={money < flatRenoCost(flat.renovation)}
+        onClick={() => renovateFlat(flat.index)}
+      >
+        🛠 {CS.reno.button(flat.renovation + 1, formatKcs(flatRenoCost(flat.renovation)))}
+      </button>
+    );
   const factors = t ? happinessFactors(game, flat) : [];
   const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
@@ -84,6 +101,7 @@ export default function TenantCard({ flat, onClose }: Props) {
               {CS.problems[flat.problem].repair} · {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
             </button>
           )}
+          {renoButton}
           {evictionRunning ? (
             <p className="eviction-pending">
               {CS.ui.evictionPending(Math.max(0, t.evictionAt! - game.tick))}
@@ -111,6 +129,7 @@ export default function TenantCard({ flat, onClose }: Props) {
             </div>
           </div>
           <p className="card-flavor">{CS.ui.vacantHint}</p>
+          {renoButton}
         </>
       )}
     </div>
