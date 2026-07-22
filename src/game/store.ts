@@ -9,7 +9,7 @@ import { tick } from './tick';
 import { resolveChoice } from './events';
 import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
 import { getLang, setLang, type Lang } from './i18n';
-import { computeOffline, type OfflineSummary } from './offline';
+import { computeOffline, OFFLINE_MIN_SECONDS, type OfflineSummary } from './offline';
 
 // Apply the persisted language before anything renders.
 const savedLang: Lang =
@@ -109,6 +109,16 @@ export const useGame = create<PanelakStore>()(
         // reload during a pause doesn't double-pay offline earnings.
         if (offlineSummary || helpOpen || game.pendingChoice) {
           set({ game: { ...game, lastSaved: Date.now() } });
+          return;
+        }
+        // If the loop was frozen for a while — laptop asleep, or a background
+        // tab the browser throttled hard — the wall clock has jumped far past
+        // the last tick. A plain tick would advance a single second and stamp
+        // lastSaved = now, silently swallowing the whole gap (the reason an
+        // open tab left overnight earned nothing). Settle it as offline rent
+        // instead, exactly the path a reload takes.
+        if ((Date.now() - game.lastSaved) / 1000 >= OFFLINE_MIN_SECONDS) {
+          get().applyOfflineProgress();
           return;
         }
         set({ game: { ...tick(game), lastSaved: Date.now() } });
