@@ -1,0 +1,28 @@
+[package]
+name = "panelak-tycoon"
+version = "0.8.0"
+description = "Panelák Tycoon — a socialist-era housing-estate idle game"
+authors = ["smeglofus"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# The library the desktop binary (and any future mobile target) links against.
+[lib]
+name = "panelak_tycoon_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Smaller, faster-to-download release binaries for distribution.
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

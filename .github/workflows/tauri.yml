@@ -1,0 +1,74 @@
+name: Desktop build (Tauri)
+
+# Native desktop bundles for the Steam / itch desktop channel. Runs on demand
+# and on version tags. On a tag it also drafts a GitHub Release with the
+# installers attached; otherwise the bundles land in the run's artifacts.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest # .exe / NSIS + MSI — the Steam target
+            args: ''
+          - platform: macos-latest # universal .app / .dmg
+            args: '--target universal-apple-darwin'
+          - platform: ubuntu-22.04 # AppImage / .deb — Steam Deck & Linux
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux webview deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - run: npm ci
+
+      - name: Build desktop bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # On a tag push, draft a release with the installers; otherwise the
+          # empty tagName tells the action to just build (artifacts uploaded
+          # in the next step).
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: 'Panelák Tycoon ${{ github.ref_name }}'
+          releaseDraft: true
+          args: ${{ matrix.args }}
+
+      - name: Upload bundles as run artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: panelak-tycoon-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/*/release/bundle/**/*
+          if-no-files-found: warn

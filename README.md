@@ -137,6 +137,30 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint + tests +
 build + docker build on every push; pushing the image to a registry is left as
 a commented template.
 
+### Desktop build (Tauri → Steam)
+
+The same web bundle is wrapped in a native window by [Tauri v2](https://tauri.app)
+in [`src-tauri/`](src-tauri/) — the shell just hosts `dist/`, no game logic
+lives there. With a local Rust toolchain:
+
+```bash
+npm run tauri dev      # native dev window (Vite on :1420)
+npm run tauri build    # installers into src-tauri/target/release/bundle/
+```
+
+You don't need Rust locally to get an `.exe`: the
+[`Desktop build (Tauri)`](.github/workflows/tauri.yml) workflow builds Windows
+(`.exe` NSIS + MSI), macOS (universal `.dmg`) and Linux (AppImage/`.deb`) on
+GitHub's runners. Run it from the Actions tab (`workflow_dispatch`) to grab
+bundles from the run's artifacts, or push a `v*` tag to draft a GitHub Release
+with the installers attached.
+
+Getting onto Steam from here: integrate the Steamworks SDK (achievements map
+onto `meta.badges`, cloud saves onto the existing `encodeSave`/`decodeSave`),
+produce capsule art + a trailer, then pay the one-time Steam Direct fee. The
+app icon is generated from [`src-tauri/app-icon.png`](src-tauri/app-icon.png)
+via `npm run tauri icon <file>` — replace it and regenerate for real art.
+
 ## Tuning
 
 Every number that matters lives in
