@@ -75,7 +75,7 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   rekordní výdělek éry, rekordní příjem, kupóny celkem
 - **Záloha savu** — export/import přes schránku (base64, verzované, migruje se)
 - **itch.io balíček** — CI přikládá web zip jako artefakt + butler šablona
-  (Steam/Tauri odloženo — HTML5 na itch je pragmatická distribuce)
+  (HTML5 na itch je pragmatická distribuce; desktop/Steam viz sekce níže)
 
 ## v0.8 „Pětiletka“ *(hotovo — pozdní hra)*
 
@@ -87,9 +87,19 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   Kulturní dům (2,5 M) — obří cíle viditelné ve scéně
 - Privatizace viditelná od začátku hry (teaser → šeptanda → dostupná)
 
+## Desktop / Steam *(scaffold hotový)*
+
+- **Tauri v2 wrapper** — `src-tauri/` hostí web bundle z `dist/` v nativním okně;
+  `npm run tauri dev` / `npm run tauri build` (potřebuje Rust toolchain lokálně)
+- **CI `Desktop build (Tauri)`** — na `workflow_dispatch` a tagy `v*` staví
+  Windows (.exe/NSIS+MSI), macOS (universal .dmg) a Linux (AppImage/.deb);
+  na tagu draftuje GitHub Release s instalátory
+- **Zbývá do Steamu:** Steamworks SDK (achievementy ← `meta.badges`, cloud save
+  ← `encodeSave`/`decodeSave`), key-art + trailer, Steam Direct účet (100 USD)
+
 ## Nápady dál
 
-- Tauri desktop build pro Steam, pixel-art jako alternativní skin, další questy
+- Steamworks integrace, pixel-art jako alternativní skin, další questy
 
 ## Průběžně
 
