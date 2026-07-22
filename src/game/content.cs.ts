@@ -9,6 +9,7 @@ import type {
   PerkId,
   ProblemId,
   RepeatableId,
+  SecretId,
   TuzexId,
   UpgradeId,
 } from './types';
@@ -27,7 +28,9 @@ export const CS = {
   ui: {
     panelHeader: 'DOMOVNÍ SPRÁVA',
     fund: 'Domovní fond',
-    reputation: 'Reputace',
+    reputation: 'Důvěra sousedů',
+    regime: 'Kádrový profil',
+    regimeGone: 'Kádrový profil (archiv)',
     avgHappiness: 'Spokojenost',
     occupancy: 'Obsazenost',
     flatsCount: (occupied: number, total: number) => `${occupied}/${total} bytů`,
@@ -60,7 +63,8 @@ export const CS = {
     milestoneReward: (kcs: string) => `Odměna od OPBH: ${kcs}.`,
     brigade: 'Akce Z',
     brigadeAction: 'Přiložit ruku k dílu',
-    brigadeHint: 'Dobrovolně povinné zvelebování okolí domu.',
+    brigadeHint:
+      'Dobrovolně povinné zvelebování okolí domu. Elán roste se spokojeností a důvěrou — komu se daří, tomu se chce.',
     energy: 'Elán',
     kronika: 'Kronika domu',
     kronikaEmpty: 'Zatím se nic nestalo. To se změní.',
@@ -82,6 +86,14 @@ export const CS = {
     evict: 'Podat návrh na výpověď',
     evictionPending: (sec: number) => `Výpovědní řízení běží… (${sec} s)`,
     evictionRefused: 'Návrh zamítnut. Zkoušeli to už tři předsedové.',
+    spy: (energy: number) => `Šmírovat (${energy} elánu)`,
+    spyHint: 'Ucho na dveřích, oko na škvíře. Když vás chytí, dům si to zapamatuje.',
+    secretTitle: 'Kádrové zjištění',
+    secretConfided: 'Svěřil(a) se vám sám(a). Důvěra zavazuje.',
+    cover: 'Krýt',
+    report: 'Udat',
+    covering: '🤫 Kryjete ho. Dům to tuší a váží si toho.',
+    reportPending: '🚔 Hlášení podáno. Papíry už putují.',
   },
 
   problems: {
@@ -160,6 +172,11 @@ export const CS = {
     pensionerDrag: 'Stížnosti sousedky s pejskem',
     svazakDrag: 'Soudruh od vedle si vše zapisuje',
     musicianDrag: 'Večerní cvičení na nástroj',
+    studenaVoda: 'Neteče vůbec žádná voda',
+    vedro: 'Vedro k zalknutí',
+    vedroPensioner: 'Na vedro už nejsou léta',
+    chripka: 'Chřipka v domě',
+    naroky: 'Vysoké nároky (na pohodlí si zvykli)',
   },
 
   help: {
@@ -176,6 +193,9 @@ export const CS = {
       'Peníze nikdy nejsou zbytečné: Modernizace zvyšuje nájem donekonečna. A od roku 1990 lze dům zprivatizovat — začnete znovu s kupóny a trvalými výhodami.',
       'Po dostavění osmi pater přidělí OPBH další parcelu — sídliště až o třech domech, každý s jinou povahou. Odznaky v kádrovém posudku přežijí všechno.',
       'Výbor zadává pětiletkové plány s termínem a odměnou. A když dojde místo, rekonstruujte byty a stavějte: samoobsluhu, školku, kulturní dům.',
+      'Správce slouží dvěma pánům: důvěře sousedů a kádrovému profilu. Volby, 1. máj a kontroly těší výbor; banány, pátrání po Azorovi a čisté chodníky těší dům. Obě osy pomalu šednou k průměru — jméno se musí udržovat.',
+      'Nájemníci mají tajemství. Šmírujte za elán, nebo si získejte důvěru a svěří se sami. Pak je můžete krýt — nebo udat. Obojí má cenu a obojí se počítá.',
+      'V listopadu 1989 se karta obrátí: kádrový profil přestane platit a dům si vzpomene, kým jste byl. U privatizace pak mluví lustrace.',
       'Po zavření záložky dům vydělává dál na 50 % (max 8 hodin). Hra se ukládá automaticky.',
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
@@ -377,6 +397,132 @@ export const CS = {
     inventura: 'Inventura v Jednotě. Nemají nic. Ani frontu. Sídliště truchlí.',
     stehovani: (floor: number) =>
       `Stěhování nábytku. Sekce jede do ${floor}. patra. Schodištěm. Za hlasitého odborného vedení.`,
+    studenaVoda: 'Havárie řadu. Neteče nic. Ani studená, ani teplá, ani naděje.',
+    studenaVodaEnd: 'Voda opět teče. Rezavá, ale teče.',
+    vedro: 'Vedro. Panelák drží teplo jak kamna a větrání je jen pověra.',
+    vedroEnd: 'Vedro polevilo. Dům si oddechl, beton dál sálá.',
+    chripka: 'Chřipka jde po patrech. Kdo nekašle, ten inhaluje. Nad hrncem.',
+    chripkaEnd: 'Chřipka odešla. Zůstaly čaje, rumy a historky o horečkách.',
+    kalamitaTitle: 'Sněhová kalamita',
+    kalamitaBody:
+      'Napadlo přes noc. Chodník zmizel, trabanty jsou bílé kopečky. Technické služby hlásí, že „situaci monitorují“.',
+    kalamitaShovel: 'Zorganizovat brigádu s lopatami (30 elánu)',
+    kalamitaSkip: 'Ono to sleze samo',
+    kalamitaShoveled:
+      'Lopaty zazvonily, chodník je čistý. Dům si o sobě zase jednou myslí dobré věci.',
+    kalamitaSkipped:
+      'Neslezlo. Ušlapalo se to v kluziště a paní Vlasta málem nabrala hodiny.',
+    mandarinky:
+      'V Jednotě mají mandarinky! Fronta stála za to. Chodby voní Vánocemi a Kubou.',
+    pomlazka:
+      'Velikonoce. Po domě chodí pomlázka, vajíčka a mírně přeceňovaná poezie.',
+    blato:
+      'Tání. Dvorek je jedno velké bláto a s ním i chodby, rohožky a nervy.',
+    bramboryTitle: 'Brigáda na brambory',
+    bramboryBody:
+      'JZD Rozvoj hlásí ohroženou sklizeň a OV očekává „dobrovolné zapojení sídliště“. V sobotu. V šest.',
+    bramborySend: 'Poslat dům na pole (soudruzi to ocení)',
+    bramborySkip: 'Vymluvit se na havárii vodovodu',
+    bramborySent:
+      'Autobus odjel v šest. Dům se vrátil s křížem v zádech a pytlem brambor na hlavu.',
+    bramborySkipped:
+      'Výmluva prošla. Podruhé už neprojde a soudruzi si udělali čárku.',
+    pliskanice: (flat: string) =>
+      `Podzimní plískanice. Střechou to prosáklo až do bytu (${flat}).`,
+    posviceni:
+      'Posvícení. Koláče, dechovka a tancovačka. Dům se druhý den drží za hlavu, ale spokojeně.',
+    svereniTitle: 'Soused se svěřuje',
+    svereniAccept: 'Vyslechnout. Mlčet umím.',
+    svereniRefuse: 'Nechci nic vědět',
+    svereniRefused:
+      'Zavřeli jste dveře dřív, než to dořekl. Bezpečnější. A o kus chladnější.',
+    hlaseniTitle: 'Návštěva v civilu',
+    hlaseniBody:
+      'Dva pánové v šedých sakách. „Soudruhu správce, vy tady vidíte lidem do života. Tak co nám povíte?“',
+    hlaseniReport: (name: string) => `Zmínit, co víte (${name})`,
+    hlaseniDeny: '„Samí slušní lidé, soudruzi.“',
+    hlaseniDenied:
+      '„Slušní lidé, jistě.“ Zapsali si to. I to, že jste nic neřekl.',
+    revoluce:
+      '17. listopadu 1989. Zvoní klíče — na náměstích i na vašem sídlišti. Něco skončilo.',
+    revoluceHero:
+      'Dům ví, kdo je nikdy neprodal. Sousedé vám tisknou ruku na chodbě.',
+    revoluceMinor:
+      'V archivech se našly papíry. Nic velkého, ale dům se dívá jinak.',
+    revoluceTraitor:
+      'Našly se složky s vaším rukopisem. Chodbou se chodí mlčky a nikdo nezdraví.',
+  },
+
+  secrets: {
+    samizdat: {
+      label: 'Přepisuje samizdat',
+      discovered: (name: string) =>
+        `${name} po nocích přepisuje samizdat. Průklepák, deset kopií, Havel.`,
+      confide: (name: string) =>
+        `${name} vás vzal(a) stranou: „Soudruhu správce… ty stránky, co u mě klapou po nocích, nejsou jídelníčky. Rozumíme si?“`,
+    },
+    radio: {
+      label: 'Poslouchá Svobodnou Evropu',
+      discovered: (name: string) =>
+        `${name} má za záclonou drátovou anténu a večer u okna „ladí počasí“. Mnichovské.`,
+      confide: (name: string) =>
+        `${name} ztišil(a) hlas: „Já večer poslouchám… no, vy víte co. Kdyby se někdo ptal, tak dechovku.“`,
+    },
+    veksl: {
+      label: 'Kšeftuje s bony a valutami',
+      discovered: (name: string) =>
+        `${name} má v kredenci obálky s bony a kurz, o kterém se Státní bance nezdá.`,
+      confide: (name: string) =>
+        `${name} pokrčil(a) rameny: „Soudruhu, já jen pomáhám lidem k pračkám. Národní hospodářství to zvládne.“`,
+    },
+    melouch: {
+      label: 'Jede melouchy načerno',
+      discovered: (name: string) =>
+        `${name} má sklep plný cizího materiálu a víkendy plné faktur, které nikdo nikdy neuvidí.`,
+      confide: (name: string) =>
+        `${name} si otřel(a) ruce do montérek: „Kdyby se někdo ptal na ty trubky ve sklepě — jsou moje. Teda… budou.“`,
+    },
+    zapad: {
+      label: 'Píše si se Západem',
+      discovered: (name: string) =>
+        `${name} dostává dopisy s německými známkami a schovává je do krabice od bot.`,
+      confide: (name: string) =>
+        `${name} vám ukázal(a) fotku: „Bratranec. Hamburk. Kdyby přišel balík, vezmete ho k sobě, že jo?“`,
+    },
+    palenka: {
+      label: 'Doma pálí slivovici',
+      discovered: (name: string) =>
+        `Za dveřmi u ${name} to bublá a voní to tak, že by kotelna mohla žárlit.`,
+      confide: (name: string) =>
+        `${name} vám strčil(a) do ruky lahvičku: „Vzorek. Kdyby někdo čmuchal, je to sirup proti kašli.“`,
+    },
+  } satisfies Record<
+    SecretId,
+    { label: string; discovered: (name: string) => string; confide: (name: string) => string }
+  >,
+
+  spy: {
+    caught: (name: string) =>
+      `${name} vás načapal(a) s uchem na dveřích. „Soudruhu správce?!“ Patro to do večera ví.`,
+    nothing: [
+      (name: string) => `${name} vede spořádaný život. Až podezřele spořádaný.`,
+      (name: string) => `U ${name} nic. Jen televize, večeře a chrápání.`,
+      (name: string) => `Nic. ${name} má tajemství nanejvýš v receptu na svíčkovou.`,
+    ],
+    confided: (name: string) =>
+      `${name} vám svěřil(a), co schovává. Teď to nesete taky.`,
+    covered: (name: string) =>
+      `Rozhodnuto: ${name} kryjete. Kdyby se někdo ptal, nic jste neviděl.`,
+    reported: (name: string) =>
+      `Hlášení o ${name} předáno. Obálka, razítko, ticho. Nikdo nic neví. Zatím.`,
+    arrest: (name: string) =>
+      `V šest ráno přijeli pro ${name}. Chodba mlčí, výtah jel dvakrát. Dům si domýšlí.`,
+    arrestConfided: (name: string) =>
+      `Přijeli pro ${name} — pro člověka, který se vám svěřil. Dům to neví jistě. Ale dívá se na vás.`,
+    coverBusted: (name: string, kcs: string) =>
+      `StB si posvítila na ${name} — a na vás. „Vy jste to věděl, soudruhu.“ Poplatek ${kcs} a vroubek v kádrech.`,
+    coverHeld: (name: string) =>
+      `StB se vyptávala na ${name}. Ukázal jste papíry vzorného domu a oni odjeli. ${name} ví, komu za to vděčí.`,
   },
 
   requests: {
@@ -482,6 +628,10 @@ export const CS = {
       'Opravdu zprivatizovat? Dům, nájemníci i fond zmizí. Zůstanou kupóny, trvalé výhody a vzpomínky. Tak to v privatizaci chodí.',
     done: (n: number) =>
       `Privatizováno. Získali jste ${n} kupónů. Dům dostal nového správce — vás. Znovu.`,
+    lustraceClean:
+      'Lustrace: čistý štít. Lidé si pamatují, koho jste kryl. Morální kredit: +3 kupóny.',
+    lustraceDirty:
+      'Lustrace: ve svazcích se našel váš rukopis. Část kupónů se rozplynula i s pověstí.',
     perkBought: (name: string, level: number) => `Trvalá výhoda: ${name} (úroveň ${level}).`,
     perksTitle: 'Trvalé výhody (za kupóny)',
     level: (n: number) => `úroveň ${n}`,
@@ -556,6 +706,16 @@ export const CS = {
       desc: 'Provést privatizaci.',
       toast: 'Kádrový posudek: KAPITALISTA. První privatizace se nezapomíná. +1 kupón.',
     },
+    slusnyClovek: {
+      label: 'Slušný člověk',
+      desc: 'Krýt v jedné éře tři sousedy.',
+      toast: 'Kádrový posudek: SLUŠNÝ ČLOVĚK. Tři lidé u vás spali klidně. +1 kupón.',
+    },
+    konfident: {
+      label: 'Konfident',
+      desc: 'Podat v jedné éře tři hlášení.',
+      toast: 'Kádrový posudek: KONFIDENT. Tři hlášení, tři obálky. Posudek to nesoudí. +1 kupón.',
+    },
   } satisfies Record<BadgeId, { label: string; desc: string; toast: string }>,
 
   posudek: {
@@ -566,6 +726,7 @@ export const CS = {
   plans: {
     title: 'Pětiletka',
     none: 'Výbor připravuje nový plán…',
+    dissolved: 'Výbor se rozpustil. Plány už nikdo nezadává — zvláštní pocit.',
     daysLeft: (d: number) => `zbývá ${d} dní`,
     reward: 'Odměna',
     kuponBonus: '+ kupón',

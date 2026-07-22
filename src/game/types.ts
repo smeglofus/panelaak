@@ -31,7 +31,12 @@ export type BadgeId =
   | 'prezimoval'
   | 'budovatel'
   | 'vzorny'
-  | 'kapitalista';
+  | 'kapitalista'
+  | 'slusnyClovek'
+  | 'konfident';
+
+/** Protirežimové (či jen protizákonné) aktivity nájemníků. */
+export type SecretId = 'samizdat' | 'radio' | 'veksl' | 'melouch' | 'zapad' | 'palenka';
 
 /** Personal records — the síň slávy. Survive every prestige. */
 export interface EraRecords {
@@ -82,6 +87,16 @@ export interface Tenant {
   quirkDone: boolean;
   /** Tick when a filed eviction completes; null when no proceedings run. */
   evictionAt: number | null;
+  /** What the tenant hides from the regime; null = spořádaný občan. */
+  secret: SecretId | null;
+  /** The správce knows the secret — spied out, or entrusted. */
+  secretKnown: boolean;
+  /** The secret was volunteered. Betraying a confidence cuts deeper. */
+  confided: boolean;
+  /** The správce actively covers for the tenant (shields StB visits). */
+  covered: boolean;
+  /** Tick when the reported tenant gets picked up; null = no hlášení filed. */
+  arrestAt: number | null;
 }
 
 export interface Flat {
@@ -146,6 +161,14 @@ export interface GameStats {
   stbVisits: number;
   /** Repairs completed by anyone — player, pan Fanda or the kutil. */
   repairsDone: number;
+  /** Šmírování attempts this era. */
+  spied: number;
+  /** Secrets entrusted voluntarily. */
+  confided: number;
+  /** Tenants the správce covers for. Counts at the lustrace. */
+  covered: number;
+  /** Hlášení filed with the StB. Counts at the lustrace, the other way. */
+  reported: number;
 }
 
 /** Sídliště mega-projects, built once per era, sequential unlock. */
@@ -180,8 +203,11 @@ export interface GameState {
   rngSeed: number;
   money: number;
   totalEarned: number;
-  /** 0..100, scales tenant move-in chance. */
+  /** Důvěra sousedů 0..100 — scales tenant move-in chance, unlocks svěřování. */
   reputation: number;
+  /** Kádrový profil 0..100 — how the výbor sees you. Softens fines, moves the
+   * pořadník; on 17. listopadu 1989 it stops mattering rather abruptly. */
+  regime: number;
   /** Elán 0..100 — spent by the Akce Z work action, regenerates over time. */
   energy: number;
   /** Always length 1 in MVP; an array so a sídliště view doesn't need a schema rewrite. */

@@ -41,6 +41,18 @@ export function isSummer(date: GameDate): boolean {
   return date.month >= 6 && date.month <= 8;
 }
 
+// 17. listopadu 1989 — after this date the regime's opinion of anyone stops
+// carrying weight. Each éra replays the arc: the reset returns to April 1988.
+export const REVOLUTION = { year: 1989, month: 11, day: 17 } as const;
+
+/** True once the calendar has passed (or reached) the sametová revoluce. */
+export function regimeFell(tick: number): boolean {
+  const d = dateFromTick(tick);
+  if (d.year !== REVOLUTION.year) return d.year > REVOLUTION.year;
+  if (d.month !== REVOLUTION.month) return d.month > REVOLUTION.month;
+  return d.day >= REVOLUTION.day;
+}
+
 /** True on the tick where the calendar first shows the given day. */
 export function dateJustReached(tick: number, month: number, day: number): boolean {
   if (tick < 1) return false;

@@ -12,7 +12,9 @@ export const EN: typeof CS = {
   ui: {
     panelHeader: 'HOUSE ADMINISTRATION',
     fund: 'House fund',
-    reputation: 'Reputation',
+    reputation: 'Neighbours’ trust',
+    regime: 'Cadre profile',
+    regimeGone: 'Cadre profile (archived)',
     avgHappiness: 'Happiness',
     occupancy: 'Occupancy',
     flatsCount: (occupied: number, total: number) => `${occupied}/${total} flats`,
@@ -45,7 +47,8 @@ export const EN: typeof CS = {
     milestoneReward: (kcs: string) => `Bonus from the housing office: ${kcs}.`,
     brigade: 'Akce Z',
     brigadeAction: 'Lend a hand',
-    brigadeHint: 'Voluntarily mandatory beautification of the surroundings.',
+    brigadeHint:
+      'Voluntarily mandatory beautification of the surroundings. Zeal grows with happiness and trust — success breeds energy.',
     energy: 'Zeal',
     kronika: 'House chronicle',
     kronikaEmpty: 'Nothing has happened yet. That will change.',
@@ -67,6 +70,14 @@ export const EN: typeof CS = {
     evict: 'File for eviction',
     evictionPending: (sec: number) => `Eviction proceedings under way… (${sec} s)`,
     evictionRefused: 'Application denied. Three chairmen have tried already.',
+    spy: (energy: number) => `Snoop (${energy} zeal)`,
+    spyHint: 'An ear on the door, an eye at the crack. Get caught and the house remembers.',
+    secretTitle: 'Cadre finding',
+    secretConfided: 'They confided in you themselves. Trust obliges.',
+    cover: 'Cover',
+    report: 'Inform',
+    covering: '🤫 You are covering for them. The house suspects it, and appreciates it.',
+    reportPending: '🚔 Report filed. The papers are on their way.',
   },
 
   problems: {
@@ -139,6 +150,11 @@ export const EN: typeof CS = {
     pensionerDrag: 'Complaints from the lady with the dog',
     svazakDrag: 'The comrade next door takes notes',
     musicianDrag: 'Evening instrument practice',
+    studenaVoda: 'No water at all',
+    vedro: 'Stifling heat wave',
+    vedroPensioner: 'Too old for this heat',
+    chripka: 'Flu in the house',
+    naroky: 'High expectations (they got used to comfort)',
   },
 
   help: {
@@ -155,6 +171,9 @@ export const EN: typeof CS = {
       'Money never goes to waste: Modernization raises rent forever. And from 1990 you can privatize — start over with kupóny and permanent perks.',
       'Finish eight floors and the housing office allots another plot — an estate of up to three houses, each with its own character. Cadre-file badges survive everything.',
       'The committee issues five-year-plan tasks with deadlines and rewards. And when you run out of space, renovate flats and build: a grocery, a kindergarten, a House of Culture.',
+      'An administrator serves two masters: the neighbours’ trust and the cadre profile. Elections, May Day and inspections please the committee; bananas, dog searches and clean pavements please the house. Both meters slowly fade to grey — a name must be maintained.',
+      'Tenants have secrets. Snoop for zeal, or earn their trust and they will confide on their own. Then you can cover for them — or inform. Both have a price, and both are counted.',
+      'In November 1989 the tables turn: the cadre profile stops mattering and the house remembers who you were. At privatization, the lustrace has the last word.',
       'Closing the tab is fine — the house keeps earning at 50 % (8 h cap). The game saves automatically.',
       'The goal: 8 floors, full house, 80 % happiness = the title “Model House of Socialist Care”.',
     ],
@@ -358,6 +377,129 @@ export const EN: typeof CS = {
     inventura: 'Stocktaking at the grocery. They have nothing. Not even a queue. The estate mourns.',
     stehovani: (floor: number) =>
       `Furniture moving. A wall unit is going to floor ${floor}. By stairs. Under loud expert supervision.`,
+    studenaVoda: 'Water-main failure. Nothing flows. Not cold, not hot, not hope.',
+    studenaVodaEnd: 'Water flows again. Rusty, but flowing.',
+    vedro: 'Heat wave. The panelák holds heat like a furnace and airflow is a superstition.',
+    vedroEnd: 'The heat let up. The house exhales; the concrete keeps radiating.',
+    chripka: 'The flu works its way up the floors. Whoever isn’t coughing is inhaling. Over a pot.',
+    chripkaEnd: 'The flu is gone. What remains: teas, rums and fever stories.',
+    kalamitaTitle: 'Snow calamity',
+    kalamitaBody:
+      'It snowed all night. The pavement vanished; the Trabants are little white hills. Technical services report they are “monitoring the situation”.',
+    kalamitaShovel: 'Organize a shovel brigade (30 zeal)',
+    kalamitaSkip: 'It will melt on its own',
+    kalamitaShoveled:
+      'Shovels rang, the pavement is clear. The house thinks well of itself again, for once.',
+    kalamitaSkipped:
+      'It didn’t melt. It got trampled into a skating rink and paní Vlasta nearly took flight.',
+    mandarinky:
+      'The grocery has mandarins! The queue was worth it. The hallways smell of Christmas and Cuba.',
+    pomlazka:
+      'Easter. The pomlázka makes its rounds, along with eggs and mildly overrated poetry.',
+    blato:
+      'The thaw. The courtyard is one big mud field — and so are the hallways, doormats and nerves.',
+    bramboryTitle: 'Potato brigade',
+    bramboryBody:
+      'The collective farm reports a threatened harvest and the committee expects the estate’s “voluntary participation”. On Saturday. At six.',
+    bramborySend: 'Send the house to the fields (the comrades will appreciate it)',
+    bramborySkip: 'Plead a water-main emergency',
+    bramborySent:
+      'The bus left at six. The house came back with aching backs and a sack of potatoes each.',
+    bramborySkipped:
+      'The excuse worked. It won’t work twice, and the comrades made a note.',
+    pliskanice: (flat: string) =>
+      `Autumn sleet. It soaked through the roof all the way into a flat (${flat}).`,
+    posviceni:
+      'Parish feast. Pies, brass band and a dance. The house holds its head the next day — contentedly.',
+    svereniTitle: 'A neighbour confides',
+    svereniAccept: 'Hear them out. I can keep quiet.',
+    svereniRefuse: 'I don’t want to know',
+    svereniRefused:
+      'You closed the door before they finished. Safer. And a touch colder.',
+    hlaseniTitle: 'A visit in plain clothes',
+    hlaseniBody:
+      'Two gentlemen in grey jackets. “Comrade administrator, you see into people’s lives here. So what can you tell us?”',
+    hlaseniReport: (name: string) => `Mention what you know (${name})`,
+    hlaseniDeny: '“All decent people here, comrades.”',
+    hlaseniDenied:
+      '“Decent people, of course.” They wrote it down. Including the fact that you said nothing.',
+    revoluce:
+      '17 November 1989. Keys are ringing — on the squares and on your estate. Something has ended.',
+    revoluceHero:
+      'The house knows who never sold them out. Neighbours shake your hand in the hallway.',
+    revoluceMinor:
+      'Papers turned up in the archives. Nothing big, but the house looks at you differently.',
+    revoluceTraitor:
+      'Files in your handwriting have surfaced. The hallway goes quiet and nobody says hello.',
+  },
+
+  secrets: {
+    samizdat: {
+      label: 'Copies samizdat',
+      discovered: (name: string) =>
+        `${name} types samizdat through the night. Carbon paper, ten copies, Havel.`,
+      confide: (name: string) =>
+        `${name} took you aside: “Comrade administrator… those pages clacking at my place at night aren’t menus. We understand each other?”`,
+    },
+    radio: {
+      label: 'Listens to Radio Free Europe',
+      discovered: (name: string) =>
+        `${name} has a wire antenna behind the curtain and “tunes the weather” by the window at night. The Munich weather.`,
+      confide: (name: string) =>
+        `${name} lowered their voice: “In the evenings I listen to… well, you know what. If anyone asks, it’s brass band music.”`,
+    },
+    veksl: {
+      label: 'Deals in bony and hard currency',
+      discovered: (name: string) =>
+        `${name} keeps envelopes of bony in the sideboard, at an exchange rate the State Bank doesn’t dream of.`,
+      confide: (name: string) =>
+        `${name} shrugged: “Comrade, I just help people get washing machines. The national economy will cope.”`,
+    },
+    melouch: {
+      label: 'Runs off-the-books jobs',
+      discovered: (name: string) =>
+        `${name} has a cellar full of someone else’s materials and weekends full of invoices nobody will ever see.`,
+      confide: (name: string) =>
+        `${name} wiped their hands on their overalls: “If anyone asks about the pipes in the cellar — they’re mine. Well… they will be.”`,
+    },
+    zapad: {
+      label: 'Writes to the West',
+      discovered: (name: string) =>
+        `${name} receives letters with German stamps and hides them in a shoebox.`,
+      confide: (name: string) =>
+        `${name} showed you a photo: “My cousin. Hamburg. If a parcel comes, you’ll take it in for me, right?”`,
+    },
+    palenka: {
+      label: 'Distills slivovice at home',
+      discovered: (name: string) =>
+        `Behind ${name}’s door something bubbles, and it smells so good the boiler room could get jealous.`,
+      confide: (name: string) =>
+        `${name} pressed a little bottle into your hand: “A sample. If anyone sniffs around, it’s cough syrup.”`,
+    },
+  },
+
+  spy: {
+    caught: (name: string) =>
+      `${name} caught you with your ear on the door. “Comrade administrator?!” The whole floor knows by evening.`,
+    nothing: [
+      (name: string) => `${name} leads an orderly life. Suspiciously orderly.`,
+      (name: string) => `Nothing at ${name}’s. Just television, dinner and snoring.`,
+      (name: string) => `Nothing. The only secret ${name} keeps is a svíčková recipe.`,
+    ],
+    confided: (name: string) =>
+      `${name} told you what they are hiding. Now you carry it too.`,
+    covered: (name: string) =>
+      `Decided: you are covering for ${name}. If anyone asks, you saw nothing.`,
+    reported: (name: string) =>
+      `The report on ${name} has been handed over. Envelope, stamp, silence. Nobody knows anything. Yet.`,
+    arrest: (name: string) =>
+      `They came for ${name} at six in the morning. The hallway is silent; the elevator ran twice. The house draws its conclusions.`,
+    arrestConfided: (name: string) =>
+      `They came for ${name} — for someone who confided in you. The house doesn’t know for sure. But it watches you.`,
+    coverBusted: (name: string, kcs: string) =>
+      `The StB looked into ${name} — and into you. “You knew, comrade.” A fee of ${kcs} and a mark in the files.`,
+    coverHeld: (name: string) =>
+      `The StB asked about ${name}. You showed them the papers of a model house and they drove off. ${name} knows who to thank.`,
   },
 
   requests: {
@@ -463,6 +605,10 @@ export const EN: typeof CS = {
       'Really privatize? The house, tenants and fund will vanish. Kupóny, permanent perks and memories remain. That’s how privatization goes.',
     done: (n: number) =>
       `Privatized. You gained ${n} kupóny. The house has a new administrator — you. Again.`,
+    lustraceClean:
+      'Lustrace: a clean slate. People remember who you covered for. Moral credit: +3 kupóny.',
+    lustraceDirty:
+      'Lustrace: your handwriting turned up in the files. Some kupóny evaporated, along with the reputation.',
     perkBought: (name: string, level: number) => `Permanent perk: ${name} (level ${level}).`,
     perksTitle: 'Permanent perks (for kupóny)',
     level: (n: number) => `level ${n}`,
@@ -537,6 +683,16 @@ export const EN: typeof CS = {
       desc: 'Carry out a privatization.',
       toast: 'Cadre file: CAPITALIST. You never forget your first privatization. +1 kupón.',
     },
+    slusnyClovek: {
+      label: 'Decent person',
+      desc: 'Cover for three neighbours in one era.',
+      toast: 'Cadre file: DECENT PERSON. Three people slept soundly because of you. +1 kupón.',
+    },
+    konfident: {
+      label: 'Informer',
+      desc: 'File three reports in one era.',
+      toast: 'Cadre file: INFORMER. Three reports, three envelopes. The file passes no judgment. +1 kupón.',
+    },
   },
 
   posudek: {
@@ -547,6 +703,7 @@ export const EN: typeof CS = {
   plans: {
     title: 'Five-year plan',
     none: 'The committee is preparing a new plan…',
+    dissolved: 'The committee has dissolved itself. Nobody issues plans anymore — a strange feeling.',
     daysLeft: (d: number) => `${d} days left`,
     reward: 'Reward',
     kuponBonus: '+ kupón',

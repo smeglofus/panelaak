@@ -1,6 +1,6 @@
 // Tenant archetype definitions and move-in logic (spec §6.3).
 
-import type { ArchetypeId, Tenant } from './types';
+import type { ArchetypeId, SecretId, Tenant } from './types';
 import type { Rng } from './rng';
 import { CS } from './content.cs';
 
@@ -88,6 +88,36 @@ export function pickWeighted<T extends { weight: number }>(items: readonly T[], 
   return items[items.length - 1];
 }
 
+/**
+ * What each archetype might be hiding, rolled in order at move-in. A disident
+ * always hides something (that's the job), most people hide nothing at all.
+ */
+const SECRET_ODDS: Record<ArchetypeId, readonly { secret: SecretId; chance: number }[]> = {
+  disident: [
+    { secret: 'samizdat', chance: 0.6 },
+    { secret: 'radio', chance: 1 },
+  ],
+  vekslak: [{ secret: 'veksl', chance: 1 }],
+  kutil: [{ secret: 'melouch', chance: 0.4 }],
+  musician: [
+    { secret: 'zapad', chance: 0.25 },
+    { secret: 'radio', chance: 0.2 },
+  ],
+  svazak: [{ secret: 'radio', chance: 0.15 }],
+  pensioner: [{ secret: 'radio', chance: 0.2 }],
+  shift: [{ secret: 'melouch', chance: 0.15 }],
+  couple: [{ secret: 'zapad', chance: 0.15 }],
+  family: [{ secret: 'zapad', chance: 0.1 }],
+  drunk: [{ secret: 'palenka', chance: 0.5 }],
+};
+
+export function rollSecret(rng: Rng, archetype: ArchetypeId): SecretId | null {
+  for (const { secret, chance } of SECRET_ODDS[archetype]) {
+    if (rng.chance(chance)) return secret;
+  }
+  return null;
+}
+
 export function createTenant(
   rng: Rng,
   id: number,
@@ -107,5 +137,10 @@ export function createTenant(
     movedInAt: tick,
     quirkDone: false,
     evictionAt: null,
+    secret: rollSecret(rng, archetype),
+    secretKnown: false,
+    confided: false,
+    covered: false,
+    arrestAt: null,
   };
 }

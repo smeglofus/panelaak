@@ -17,6 +17,7 @@ import type {
   UpgradeId,
 } from './types';
 import { ARCHETYPES } from './tenants';
+import { regimeFell } from './calendar';
 
 // --- Building ---------------------------------------------------------------
 
@@ -106,6 +107,19 @@ export function incomePerSec(state: GameState): number {
 // --- Happiness --------------------------------------------------------------
 
 export const HAPPINESS_BASE_TARGET = 70;
+/**
+ * Diminishing returns on comfort: positive factors add up in full only to the
+ * knee; beyond it each point counts for this fraction. Tenants get used to the
+ * good life — the surplus shows on the card as „vysoké nároky“. Keeps late-game
+ * moods honest instead of parked at 100 with every debuff swallowed by the cap.
+ */
+export const COMFORT_KNEE = 12;
+export const COMFORT_EXCESS_KEPT = 0.35;
+
+export function comfortExcessLoss(positiveSum: number): number {
+  if (positiveSum <= COMFORT_KNEE) return 0;
+  return Math.round((positiveSum - COMFORT_KNEE) * (1 - COMFORT_EXCESS_KEPT));
+}
 /** Fraction of (target − current) applied per second. */
 export const HAPPINESS_DRIFT_RATE = 0.02;
 export const ELEVATOR_DECAY_MULT = 3; // broken elevator: floors 3+ decay 3× faster
@@ -136,6 +150,17 @@ export function moveInChance(reputation: number): number {
   return MOVE_IN_BASE_CHANCE * (0.5 + reputation / 100);
 }
 
+/**
+ * Both standing meters (důvěra i kádrový profil) slowly sag toward the grey
+ * average of 50 — a good name has to be maintained, a bad one is forgotten.
+ * Fraction of (50 − value) applied per second.
+ */
+export const STANDING_DRIFT_RATE = 0.0002;
+
+export function driftToward50(value: number): number {
+  return value + (50 - value) * STANDING_DRIFT_RATE;
+}
+
 export const MOVE_OUT_HAPPINESS_THRESHOLD = 20;
 export const MOVE_OUT_GRACE_SECONDS = 60;
 
@@ -154,8 +179,23 @@ export const REP_MILESTONE = 3;
 
 export const BRIGADE_ENERGY_MAX = 100;
 export const BRIGADE_ENERGY_COST = 10;
-/** Per second → a sustained click every 2.5 s, or a burst of 10 from full elán. */
-export const BRIGADE_ENERGY_REGEN = 4;
+/**
+ * Elán roste s tím, jak se domu daří: base + share for average happiness +
+ * share for důvěra sousedů. At a so-so house (avg 60, důvěra 50) this lands
+ * on the historic flat rate of ~4/s; a thriving dům pushes ~6, a miserable
+ * one drags toward 1.5 — but never stalls (no dead state).
+ */
+export const BRIGADE_REGEN_BASE = 1.5;
+export const BRIGADE_REGEN_HAPPY_SHARE = 3.5;
+export const BRIGADE_REGEN_TRUST_SHARE = 1.0;
+
+export function brigadeRegen(avgHappiness: number, reputation: number): number {
+  return (
+    BRIGADE_REGEN_BASE +
+    BRIGADE_REGEN_HAPPY_SHARE * (avgHappiness / 100) +
+    BRIGADE_REGEN_TRUST_SHARE * (reputation / 100)
+  );
+}
 
 export function brigadeReward(floors: number, naradiLevel = 0, rucickyLevel = 0): number {
   return 3 + floors + NARADI_REWARD_BONUS * naradiLevel + RUCICKY_BONUS * rucickyLevel;
@@ -205,10 +245,37 @@ export const STRIBRO_START_MONEY = 500;
 export const POVEST_START_REP = 5;
 export const RUCICKY_BONUS = 3;
 
-/** Fines and "fees" get milder with konexe na výboru. */
+/** Fines and "fees" get milder with konexe na výboru — and with a good kádrový
+ * profil. A bad profile makes every kontrola pricier. After the revolution the
+ * profile stops entering the math. */
 export function fineMult(state: GameState): number {
-  return Math.max(0.5, 1 - KONEXE_DISCOUNT * state.meta.perks.konexe);
+  const konexe = Math.max(0.5, 1 - KONEXE_DISCOUNT * state.meta.perks.konexe);
+  if (regimeFell(state.tick)) return konexe;
+  const profile = Math.min(
+    1.4,
+    Math.max(0.6, REGIME_FINE_BASE - REGIME_FINE_SLOPE * state.regime),
+  );
+  return konexe * profile;
 }
+
+// --- Kádrový profil (the regime axis) ------------------------------------------
+
+export const STARTING_REGIME = 50;
+/** fineMult factor = base − slope·regime → 1.4× at profile 0, 0.6× at 100. */
+export const REGIME_FINE_BASE = 1.4;
+export const REGIME_FINE_SLOPE = 0.008;
+/** ONV allocates flats: the pořadník moves faster for well-profiled správci. */
+export const REGIME_MOVE_IN_MIN = 0.7;
+export const REGIME_MOVE_IN_MAX = 1.3;
+
+export function regimeMoveInMult(regime: number, fell: boolean): number {
+  if (fell) return 1;
+  return REGIME_MOVE_IN_MIN + (REGIME_MOVE_IN_MAX - REGIME_MOVE_IN_MIN) * (regime / 100);
+}
+
+/** Plnění plánu těší výbor; neplnění se píše. */
+export const REGIME_PLAN_DONE = 2;
+export const REGIME_PLAN_FAIL = -3;
 
 // --- Rekonstrukce bytů (per-flat renovation) ---------------------------------------
 
@@ -246,7 +313,6 @@ export const KULTURAK_BON_INTERVAL = 240;
 export const PLAN_COOLDOWN = 60;
 /** First plan arrives after this many ticks of a fresh era. */
 export const PLAN_FIRST_AT = 120;
-export const PLAN_FAIL_REP = -3;
 export const PLAN_HAPPY_THRESHOLD = 75;
 /** Chance a plan carries a kupón on top of the usual reward. */
 export const PLAN_KUPON_CHANCE = 0.25;
@@ -265,6 +331,8 @@ export const BADGE_KUPON_REWARD = 1;
 export const UDERNIK_CLICKS = 250;
 export const PROVERENY_STB_VISITS = 5;
 export const MILIONAR_EARNED = 1_000_000;
+export const SLUSNY_CLOVEK_COVERED = 3;
+export const KONFIDENT_REPORTED = 3;
 
 // --- Breakdowns -------------------------------------------------------------
 
@@ -299,8 +367,35 @@ export const RADIATOR_CHANCE = 1 / 300;
 export const ODSTAVKA_DURATION = 180;
 export const VANOCE_HAPPINESS_BONUS = 15;
 export const MAJ_DECORATION_COST = 40;
-export const REP_MAJ_DECORATED = 6;
-export const REP_MAJ_SKIPPED = -6;
+export const REGIME_MAJ_DECORATED = 7;
+export const REGIME_MAJ_SKIPPED = -7;
+
+// --- Seasonal events (v0.9) ------------------------------------------------------
+
+/** Havárie řadu: neteče vůbec nic. Target penalty while active. */
+export const STUDENA_VODA_PENALTY = 35;
+/** Letní vedro; panelák je akumulační kamna. */
+export const VEDRO_PENALTY = 12;
+export const VEDRO_PENSIONER_EXTRA = 8;
+/** Zimní chřipková epidemie. */
+export const CHRIPKA_PENALTY = 15;
+/** Sněhová kalamita — brigáda stojí elán, ignorace náladu i důvěru. */
+export const KALAMITA_ENERGY_COST = 30;
+export const KALAMITA_SHOVELED_BONUS = 8;
+export const REP_KALAMITA_SHOVELED = 3;
+export const KALAMITA_SKIP_HIT = 8;
+export const REP_KALAMITA_SKIP = -3;
+/** Prosincové mandarinky v Jednotě. Vůně Vánoc a devizového obchodu. */
+export const MANDARINKY_BONUS = 12;
+export const REP_MANDARINKY = 2;
+export const POMLAZKA_BONUS = 10;
+export const BLATO_HIT = 6;
+/** Podzimní brigáda na brambory — OV ji očekává, nájemníci nikoli. */
+export const BRAMBORY_REGIME = 6;
+export const BRAMBORY_HAPPINESS_HIT = 8;
+export const BRAMBORY_SKIP_REGIME = -6;
+export const POSVICENI_BONUS = 10;
+export const POSVICENI_COST = 30;
 
 // --- Eviction (výpověď) ---------------------------------------------------------
 
@@ -361,10 +456,10 @@ export const EVENT_SIDLISTE_BONUS = 0.3;
 /** No events during the first moments of a fresh game. */
 export const EVENT_GRACE_SECONDS = 45;
 
-// v0.6 events
-export const VOLBY_REP_GO = 4;
+// v0.6 events — volby, kontroly a 1. máj se zapisují do kádrového profilu
+export const VOLBY_REGIME_GO = 5;
 export const VOLBY_HAPPINESS_HIT = 3;
-export const VOLBY_REP_SKIP = -8;
+export const VOLBY_REGIME_SKIP = -9;
 export const POUT_HAPPINESS_BONUS = 12;
 export const POUT_COST = 20;
 export const INVENTURA_HIT = 8;
@@ -373,14 +468,68 @@ export const STEHOVANI_HIT = 10;
 export const KSC_FINE_RATE = 0.1;
 export const KSC_FINE_MIN = 20;
 export const KSC_FINE_MAX = 500;
-export const REP_KSC_PRAISE = 8;
-export const REP_KSC_FINE = -5;
+export const REGIME_KSC_PRAISE = 8;
+export const REGIME_KSC_FINE = -5;
 
 export const STB_FEE_RATE = 0.15;
 export const STB_FEE_MIN = 10;
 export const STB_FEE_MAX = 1000;
 
 export const MEJDAN_HAPPINESS_HIT = 25;
+
+// --- Šmírování, svěřování, krytí a udávání (v0.9) --------------------------------
+
+export const SPY_ENERGY_COST = 25;
+/** Chance the snoop finds the secret (when there is one to find). */
+export const SPY_DISCOVER_CHANCE = 0.55;
+/** Chance the tenant catches the správce with an ear on the door. */
+export const SPY_CAUGHT_CHANCE = 0.15;
+export const SPY_CAUGHT_HAPPINESS_HIT = 10;
+export const REP_SPY_CAUGHT = -5;
+
+/** Tenants confide only when they're happy and the správce is trusted. */
+export const CONFIDE_MIN_HAPPINESS = 70;
+export const CONFIDE_MIN_REP = 55;
+export const CONFIDE_TENANT_BONUS = 8;
+export const REP_CONFIDE_ACCEPTED = 3;
+export const CONFIDE_REFUSED_HIT = 5;
+
+export const COVER_TENANT_BONUS = 15;
+export const REP_COVER = 6;
+
+/** Hlášení: the StB pays in profile points and a discreet envelope. */
+export const REPORT_REGIME_BONUS = 12;
+export const REPORT_BONY = 2;
+/** Three game days between the hlášení and the 6:00 knock. */
+export const ARREST_DELAY_SECONDS = 90;
+export const ARREST_HOUSE_HAPPINESS_HIT = 10;
+export const REP_ARREST = -8;
+/** Betraying someone who confided in you costs extra when it comes out. */
+export const REP_ARREST_CONFIDED_EXTRA = -6;
+
+/** A covered tenant survives StB visits — but each visit risks exposing you. */
+export const STB_COVER_BUST_CHANCE = 0.4;
+export const REGIME_COVER_BUSTED = -15;
+export const REP_COVER_HELD = 2;
+export const COVER_HELD_TENANT_BONUS = 5;
+
+/** Zapírat u výslechu něco stojí. */
+export const REGIME_HLASENI_DENIED = -6;
+/** The StB starts asking for hlášení only once the house has a life to report on. */
+export const HLASENI_MIN_TICK = 600;
+
+// --- Revoluce a lustrace ---------------------------------------------------------
+
+/** Reports that brand the era's správce at the revolution and the lustrace. */
+export const LUSTRACE_REPORTED_LIMIT = 3;
+/** Cover at least this many (and report no one) for the morální kredit. */
+export const LUSTRACE_COVERED_MIN = 2;
+export const LUSTRACE_KUPON_BONUS = 3;
+/** Kupóny kept by a správce whose podpisy se našly. */
+export const LUSTRACE_PENALTY_MULT = 0.75;
+export const REP_REVOLUTION_HERO = 12;
+export const REP_REVOLUTION_MINOR = -8;
+export const REP_REVOLUTION_TRAITOR = -20;
 
 export const BANANAS_HAPPINESS_BONUS = 15;
 export const REP_BANANAS = 2;

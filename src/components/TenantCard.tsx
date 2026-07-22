@@ -4,6 +4,7 @@
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import { ARCHETYPES } from '../game/tenants';
+import { regimeFell } from '../game/calendar';
 import {
   EVICTION_COST,
   FLAT_RENO_MAX,
@@ -12,6 +13,7 @@ import {
   formatKcs,
   formatKcsPerSec,
   PROBLEM_DEFS,
+  SPY_ENERGY_COST,
 } from '../game/economy';
 import { happinessFactors } from '../game/tick';
 import { useGame } from '../game/store';
@@ -27,7 +29,11 @@ export default function TenantCard({ flat, onClose }: Props) {
   const repairProblem = useGame((s) => s.repairProblem);
   const requestEviction = useGame((s) => s.requestEviction);
   const renovateFlat = useGame((s) => s.renovateFlat);
+  const spyOnFlat = useGame((s) => s.spyOnFlat);
+  const coverFlat = useGame((s) => s.coverFlat);
+  const reportFlat = useGame((s) => s.reportFlat);
   const t = flat.tenant;
+  const fell = regimeFell(game.tick);
 
   const renoButton =
     flat.renovation >= FLAT_RENO_MAX ? (
@@ -90,6 +96,52 @@ export default function TenantCard({ flat, onClose }: Props) {
             </div>
           )}
           <p className="card-flavor">{t.flavor}</p>
+          {t.secretKnown && t.secret ? (
+            <div className="card-secret">
+              <span className="factors-title">📎 {CS.ui.secretTitle}</span>
+              <p className="secret-label">
+                {CS.secrets[t.secret].label}
+                {t.confided && <span className="secret-note"> · {CS.ui.secretConfided}</span>}
+              </p>
+              {t.arrestAt !== null ? (
+                <p className="brigade-hint">{CS.ui.reportPending}</p>
+              ) : t.covered ? (
+                <p className="brigade-hint">{CS.ui.covering}</p>
+              ) : (
+                !fell && (
+                  <div className="secret-actions">
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={() => coverFlat(flat.index)}
+                    >
+                      🤫 {CS.ui.cover}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-evict"
+                      onClick={() => reportFlat(flat.index)}
+                    >
+                      🚔 {CS.ui.report}
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+          ) : (
+            !fell &&
+            !t.secretKnown && (
+              <button
+                type="button"
+                className="btn btn-small btn-spy"
+                disabled={game.energy < SPY_ENERGY_COST}
+                title={CS.ui.spyHint}
+                onClick={() => spyOnFlat(flat.index)}
+              >
+                🔍 {CS.ui.spy(SPY_ENERGY_COST)}
+              </button>
+            )
+          )}
           {flat.problem && (
             <button
               type="button"

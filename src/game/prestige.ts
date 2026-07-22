@@ -4,7 +4,15 @@
 
 import type { GameState, Meta, PerkId } from './types';
 import { dateFromTick } from './calendar';
-import { PERK_COSTS, PERK_MAX, PRIVATIZACE_YEAR } from './economy';
+import {
+  LUSTRACE_COVERED_MIN,
+  LUSTRACE_KUPON_BONUS,
+  LUSTRACE_PENALTY_MULT,
+  LUSTRACE_REPORTED_LIMIT,
+  PERK_COSTS,
+  PERK_MAX,
+  PRIVATIZACE_YEAR,
+} from './economy';
 import { addLog, createInitialState } from './state';
 import { CS } from './content.cs';
 
@@ -17,19 +25,34 @@ export function privatizaceRumoured(s: GameState): boolean {
   return dateFromTick(s.tick).year >= PRIVATIZACE_YEAR - 1;
 }
 
+/** How the éra's lustrace turns out — the paper trail follows the správce. */
+export type LustraceOutcome = 'clean' | 'dirty' | 'none';
+
+export function lustraceOutcome(s: GameState): LustraceOutcome {
+  if (s.stats.reported >= LUSTRACE_REPORTED_LIMIT) return 'dirty';
+  if (s.stats.reported === 0 && s.stats.covered >= LUSTRACE_COVERED_MIN) return 'clean';
+  return 'none';
+}
+
 /**
  * Kupóny earned by privatizing now: lifetime earnings buy the bulk, the
- * Vzorný dům title adds a bonus. Tuned so the first prestige yields ~15–25.
+ * Vzorný dům title adds a bonus — and the lustrace has the last word.
+ * Tuned so the first prestige yields ~15–25.
  */
 export function computeKupony(s: GameState): number {
   const fromEarnings = Math.floor(Math.sqrt(s.totalEarned / 500));
   const fromTitle = s.milestones.vzornyDum ? 5 : 0;
-  return fromEarnings + fromTitle;
+  const base = fromEarnings + fromTitle;
+  const outcome = lustraceOutcome(s);
+  if (outcome === 'dirty') return Math.floor(base * LUSTRACE_PENALTY_MULT);
+  if (outcome === 'clean') return base + LUSTRACE_KUPON_BONUS;
+  return base;
 }
 
 /** Reset the world, keep (and grow) the meta. */
 export function applyPrestige(s: GameState, seed?: number): GameState {
   const earned = computeKupony(s);
+  const lustrace = lustraceOutcome(s);
   const meta: Meta = {
     prestigeLevel: s.meta.prestigeLevel + 1,
     kupony: s.meta.kupony + earned,
@@ -43,6 +66,8 @@ export function applyPrestige(s: GameState, seed?: number): GameState {
   };
   let next = createInitialState(seed, meta);
   next = addLog(next, 'milestone', CS.prestige.done(earned));
+  if (lustrace === 'clean') next = addLog(next, 'good', CS.prestige.lustraceClean);
+  if (lustrace === 'dirty') next = addLog(next, 'bad', CS.prestige.lustraceDirty);
   return next;
 }
 

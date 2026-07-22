@@ -4,7 +4,7 @@ import { EVENTS } from '../events';
 import { applyPrestige } from '../prestige';
 import { createRng } from '../rng';
 import { incomePerSec, SITES, UDERNIK_CLICKS } from '../economy';
-import { migrateSave } from '../state';
+import { migrateSave, SAVE_VERSION } from '../state';
 import type { GameState } from '../types';
 import { freshState, makeTenant, withFloors, withSecondBuilding, withTenant } from './helpers';
 
@@ -108,6 +108,6 @@ describe('migration v6', () => {
     expect(migrated.meta.badges.udernik).toBe(false);
     expect(migrated.meta.kupony).toBe(3);
     expect(migrated.stats.brigadeClicks).toBe(0);
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(SAVE_VERSION);
   });
 });

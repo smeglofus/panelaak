@@ -4,6 +4,7 @@ import { describePlan, PLAN_DEFS, processPlan } from '../plans';
 import { createRng } from '../rng';
 import type { ActivePlan, GameState } from '../types';
 import {
+  comfortExcessLoss,
   FIX_PLAN_SUPPLY_INTERVAL,
   flatRenoCost,
   FLAT_RENO_MAX,
@@ -69,14 +70,14 @@ describe('pětiletka', () => {
     expect(s.log.some((e) => e.kind === 'milestone')).toBe(true);
   });
 
-  it('expires with a reputation slap', () => {
+  it('expires with a kádrový-profil slap', () => {
     let s = freshState();
     const plan = { ...brigadePlan(s), deadline: s.tick };
     s = { ...s, plan };
-    const before = s.reputation;
+    const before = s.regime;
     s = processPlan(s, createRng(1));
     expect(s.plan).toBeNull();
-    expect(s.reputation).toBeLessThan(before);
+    expect(s.regime).toBeLessThan(before);
   });
 
   it('a fix plan breaks something when there is nothing to repair', () => {
@@ -141,7 +142,9 @@ describe('rekonstrukce bytů', () => {
       ],
     };
     expect(incomePerSec(s)).toBeCloseTo(baseIncome * 1.24, 5);
-    expect(happinessTarget(s, s.buildings[0].flats[0])).toBe(baseTarget + 15);
+    // +15 raw comfort, minus the vysoké-nároky compression above the knee.
+    const expected = baseTarget + 15 - comfortExcessLoss(15);
+    expect(happinessTarget(s, s.buildings[0].flats[0])).toBe(expected);
   });
 });
 

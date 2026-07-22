@@ -1530,6 +1530,36 @@ button {
   margin: 6px 0;
 }
 
+/* --- Kádrové zjištění (secrets) ---------------------------------------------- */
+
+.card-secret {
+  margin: 8px 0 4px;
+  padding: 7px 9px;
+  background: rgba(120, 40, 30, 0.05);
+  border: 1px dashed var(--bad);
+}
+
+.secret-label {
+  font-size: 12px;
+  color: #4a463c;
+  margin: 0 0 4px;
+}
+
+.secret-note {
+  font-size: 11px;
+  color: #6e685a;
+  font-style: italic;
+}
+
+.secret-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-spy {
+  margin-top: 6px;
+}
+
 .tenant-card .btn-repair {
   margin-top: 8px;
 }

@@ -12,11 +12,12 @@ import {
   formatKcs,
   incomePerSec,
   PLAN_COOLDOWN,
-  PLAN_FAIL_REP,
   PLAN_HAPPY_THRESHOLD,
   PLAN_KUPON_CHANCE,
+  REGIME_PLAN_DONE,
+  REGIME_PLAN_FAIL,
 } from './economy';
-import { SECONDS_PER_DAY } from './calendar';
+import { regimeFell, SECONDS_PER_DAY } from './calendar';
 
 interface PlanDef {
   id: PlanId;
@@ -183,7 +184,8 @@ function ensureFixSupply(s: GameState, rng: Rng): GameState {
 /** One tick of the pětiletka machinery: issue, advance, resolve. */
 export function processPlan(s: GameState, rng: Rng): GameState {
   if (!s.plan) {
-    if (s.tick >= s.nextPlanAt) {
+    // Po 17. listopadu 1989 už výbor žádné plány nezadává. Rozpustil se.
+    if (s.tick >= s.nextPlanAt && !regimeFell(s.tick)) {
       const plan = generatePlan(s, rng);
       s = { ...s, plan };
       s = addLog(s, 'event', CS.plans.started(describePlan(plan)));
@@ -207,6 +209,7 @@ export function processPlan(s: GameState, rng: Rng): GameState {
       money: s.money + plan.rewardKcs,
       totalEarned: s.totalEarned + plan.rewardKcs,
       bony: s.bony + plan.rewardBony,
+      regime: clamp(s.regime + REGIME_PLAN_DONE, 0, 100),
       meta: plan.rewardKupon
         ? {
             ...s.meta,
@@ -226,7 +229,7 @@ export function processPlan(s: GameState, rng: Rng): GameState {
       ...s,
       plan: null,
       nextPlanAt: s.tick + PLAN_COOLDOWN,
-      reputation: clamp(s.reputation + PLAN_FAIL_REP, 0, 100),
+      regime: clamp(s.regime + REGIME_PLAN_FAIL, 0, 100),
     };
     return addLog(s, 'bad', CS.plans.failed(describePlan(plan)));
   }

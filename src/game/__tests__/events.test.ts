@@ -41,20 +41,20 @@ describe('eligibility conditions', () => {
 });
 
 describe('kontrola z OV KSČ', () => {
-  it('fines a building in bad shape and costs reputation', () => {
+  it('fines a building in bad shape and hurts the kádrový profil', () => {
     let s = withFloors(freshState(), 1);
     s = withTenant(s, 0, { happiness: 10 });
     s = { ...s, money: 500 };
     const next = def('kscControl').apply(s, createRng(1));
     expect(next.money).toBeLessThan(500);
-    expect(next.reputation).toBeLessThan(s.reputation);
+    expect(next.regime).toBeLessThan(s.regime);
   });
 
   it('praises a building in good shape', () => {
     const s = withTenant(freshState(), 1, { happiness: 90 });
     const next = def('kscControl').apply(s, createRng(1));
     expect(next.money).toBe(s.money);
-    expect(next.reputation).toBeGreaterThan(s.reputation);
+    expect(next.regime).toBeGreaterThan(s.regime);
   });
 });
 
@@ -179,7 +179,7 @@ describe('svazák a StB (v0.2 archetypes)', () => {
     s = { ...s, money: 500 };
     const next = def('kscControl').apply(s, createRng(1));
     expect(next.money).toBe(500); // no fine
-    expect(next.reputation).toBeGreaterThan(s.reputation);
+    expect(next.regime).toBeGreaterThan(s.regime);
   });
 
   it('a disident makes the StB visit possible', () => {
@@ -240,31 +240,31 @@ describe('prosby nájemníků', () => {
 });
 
 describe('první máj', () => {
-  it('decorating costs money and earns reputation; skipping is noted', () => {
+  it('decorating costs money and pleases the výbor; skipping is noted', () => {
     const s = { ...freshState(), money: 500 };
     const opened = majChoice(s);
     expect(opened.pendingChoice?.eventId).toBe('prvnimaj');
 
     const decorated = resolveChoice(opened, 'decorate');
     expect(decorated.money).toBe(500 - MAJ_DECORATION_COST);
-    expect(decorated.reputation).toBeGreaterThan(s.reputation);
+    expect(decorated.regime).toBeGreaterThan(s.regime);
 
     const skipped = resolveChoice(opened, 'skip');
-    expect(skipped.reputation).toBeLessThan(s.reputation);
+    expect(skipped.regime).toBeLessThan(s.regime);
   });
 });
 
 describe('v0.6 events', () => {
-  it('volby: going costs a little mood, skipping costs reputation', () => {
+  it('volby: going costs a little mood, skipping costs the kádrový profil', () => {
     const opened = def('volby').apply(withTenant(freshState(), 1, { happiness: 60 }), createRng(1));
     expect(opened.pendingChoice?.eventId).toBe('volby');
 
     const went = resolveChoice(opened, 'go');
-    expect(went.reputation).toBeGreaterThan(opened.reputation);
+    expect(went.regime).toBeGreaterThan(opened.regime);
     expect(went.buildings[0].flats[1].tenant!.happiness).toBeLessThan(60);
 
     const stayed = resolveChoice(opened, 'skip');
-    expect(stayed.reputation).toBeLessThan(opened.reputation);
+    expect(stayed.regime).toBeLessThan(opened.regime);
   });
 
   it('pouť lifts everyone and costs pocket money', () => {

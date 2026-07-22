@@ -7,6 +7,7 @@ import { persist } from 'zustand/middleware';
 import type { CourtyardId, GameState, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveChoice } from './events';
+import { coverTenant, reportTenant, spyOnTenant } from './secrets';
 import { applyPrestige, buyPerk, privatizaceAvailable } from './prestige';
 import { getLang, setLang, type Lang } from './i18n';
 import { computeOffline, OFFLINE_MIN_SECONDS, type OfflineSummary } from './offline';
@@ -80,6 +81,9 @@ interface PanelakStore {
   repairElevator: (bIdx: number) => void;
   repairProblem: (flatIndex: number) => void;
   requestEviction: (flatIndex: number) => void;
+  spyOnFlat: (flatIndex: number) => void;
+  coverFlat: (flatIndex: number) => void;
+  reportFlat: (flatIndex: number) => void;
   buyTuzex: (id: TuzexId) => void;
   buyKava: () => void;
   buyRepeatable: (id: RepeatableId) => void;
@@ -287,6 +291,21 @@ export const useGame = create<PanelakStore>()(
         }));
         next = addLog(next, 'info', CS.toasts.evictionFiled(t.name));
         set({ game: next });
+      },
+
+      spyOnFlat: (flatIndex) => {
+        const { game } = get();
+        set({ game: spyOnTenant(game, flatIndex) });
+      },
+
+      coverFlat: (flatIndex) => {
+        const { game } = get();
+        set({ game: coverTenant(game, flatIndex) });
+      },
+
+      reportFlat: (flatIndex) => {
+        const { game } = get();
+        set({ game: reportTenant(game, flatIndex) });
       },
 
       buyTuzex: (id) => {

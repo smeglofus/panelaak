@@ -5,6 +5,7 @@
 import type { GameState, PendingChoice } from './types';
 import type { Rng } from './rng';
 import { CS } from './content.cs';
+import { dateFromTick, regimeFell, seasonKey, type Season } from './calendar';
 import {
   addLog,
   avgHappiness,
@@ -17,14 +18,39 @@ import {
   vacateFlat,
 } from './state';
 import { pickWeighted } from './tenants';
+import { confideCandidates, knownUnreported, reportTenant } from './secrets';
 import {
   AZOR_FOUND_BONUS,
   AZOR_SEARCH_COST,
   AZOR_SKIP_PENSIONER_HIT,
   BANANAS_HAPPINESS_BONUS,
+  BLATO_HIT,
+  BRAMBORY_HAPPINESS_HIT,
+  BRAMBORY_REGIME,
+  BRAMBORY_SKIP_REGIME,
+  CONFIDE_MIN_REP,
+  CONFIDE_REFUSED_HIT,
+  CONFIDE_TENANT_BONUS,
+  COVER_HELD_TENANT_BONUS,
+  HLASENI_MIN_TICK,
+  KALAMITA_ENERGY_COST,
+  KALAMITA_SHOVELED_BONUS,
+  KALAMITA_SKIP_HIT,
   MAJ_DECORATION_COST,
-  REP_MAJ_DECORATED,
-  REP_MAJ_SKIPPED,
+  MANDARINKY_BONUS,
+  REGIME_COVER_BUSTED,
+  REGIME_HLASENI_DENIED,
+  REGIME_MAJ_DECORATED,
+  REGIME_MAJ_SKIPPED,
+  REP_CONFIDE_ACCEPTED,
+  REP_COVER_HELD,
+  REP_KALAMITA_SHOVELED,
+  REP_KALAMITA_SKIP,
+  REP_MANDARINKY,
+  POMLAZKA_BONUS,
+  POSVICENI_BONUS,
+  POSVICENI_COST,
+  STB_COVER_BUST_CHANCE,
   TETA_BONY,
   EVENT_CHANCE,
   EVENT_GRACE_SECONDS,
@@ -36,8 +62,8 @@ import {
   POUT_HAPPINESS_BONUS,
   STEHOVANI_HIT,
   VOLBY_HAPPINESS_HIT,
-  VOLBY_REP_GO,
-  VOLBY_REP_SKIP,
+  VOLBY_REGIME_GO,
+  VOLBY_REGIME_SKIP,
   JITRNICE_HAPPINESS_BONUS,
   KSC_FINE_MAX,
   KSC_FINE_MIN,
@@ -46,8 +72,8 @@ import {
   RAJCATA_BONUS,
   REP_AZOR_SKIP,
   REP_BANANAS,
-  REP_KSC_FINE,
-  REP_KSC_PRAISE,
+  REGIME_KSC_FINE,
+  REGIME_KSC_PRAISE,
   REP_TRABANT,
   REP_ZLODEJ,
   SATELLITE_FINE,
@@ -60,6 +86,12 @@ import {
   VRTANI_HIT,
   ZLODEJ_PENSIONER_HIT,
 } from './economy';
+
+const inSeason = (s: GameState, season: Season): boolean =>
+  seasonKey(dateFromTick(s.tick)) === season;
+
+/** Regime-flavored events stop firing once the regime stops existing. */
+const preRevolution = (s: GameState): boolean => !regimeFell(s.tick);
 
 export interface GameEventDef {
   id: string;
@@ -82,10 +114,11 @@ export const EVENTS: readonly GameEventDef[] = [
   {
     id: 'kscControl',
     weight: 14,
+    condition: preRevolution,
     apply: (s) => {
       // A svazák in the house vouches for it — the control always goes well.
       if (hasArchetype(s, 'svazak')) {
-        const next = { ...s, reputation: clamp(s.reputation + REP_KSC_PRAISE, 0, 100) };
+        const next = { ...s, regime: clamp(s.regime + REGIME_KSC_PRAISE, 0, 100) };
         return addLog(next, 'good', CS.events.kscSvazak);
       }
       const inBadShape = avgHappiness(s) < 50 || s.buildings.some((b) => b.elevatorBroken);
@@ -96,24 +129,62 @@ export const EVENTS: readonly GameEventDef[] = [
         const next = {
           ...s,
           money: Math.max(0, s.money - fine),
-          reputation: clamp(s.reputation + REP_KSC_FINE, 0, 100),
+          regime: clamp(s.regime + REGIME_KSC_FINE, 0, 100),
         };
         return addLog(next, 'bad', CS.events.kscFine(formatKcs(fine)));
       }
-      const next = { ...s, reputation: clamp(s.reputation + REP_KSC_PRAISE, 0, 100) };
+      const next = { ...s, regime: clamp(s.regime + REGIME_KSC_PRAISE, 0, 100) };
       return addLog(next, 'good', CS.events.kscPraise);
     },
   },
   {
     id: 'stbVisit',
     weight: 12,
-    condition: (s) => hasArchetype(s, 'vekslak') || hasArchetype(s, 'disident'),
+    // Suspects: the usual archetypes, plus anyone the správce is covering for.
+    condition: (s) =>
+      preRevolution(s) &&
+      allFlats(s).some(
+        (f) =>
+          f.tenant &&
+          f.tenant.arrestAt === null &&
+          (f.tenant.archetype === 'vekslak' ||
+            f.tenant.archetype === 'disident' ||
+            f.tenant.covered),
+      ),
     apply: (s, rng) => {
       const suspects = allFlats(s).filter(
-        (f) => f.tenant?.archetype === 'vekslak' || f.tenant?.archetype === 'disident',
+        (f) =>
+          f.tenant &&
+          f.tenant.arrestAt === null &&
+          (f.tenant.archetype === 'vekslak' ||
+            f.tenant.archetype === 'disident' ||
+            f.tenant.covered),
       );
       const flat = rng.pick(suspects);
       s = { ...s, stats: { ...s.stats, stbVisits: s.stats.stbVisits + 1 } };
+      if (flat.tenant!.covered) {
+        // The správce stands in the doorway with the papers of an honest house.
+        if (rng.chance(STB_COVER_BUST_CHANCE)) {
+          const fee = Math.round(
+            clamp(Math.round(s.money * STB_FEE_RATE), STB_FEE_MIN, STB_FEE_MAX) * fineMult(s),
+          );
+          const next = {
+            ...s,
+            money: Math.max(0, s.money - fee),
+            regime: clamp(s.regime + REGIME_COVER_BUSTED, 0, 100),
+          };
+          return addLog(next, 'bad', CS.spy.coverBusted(flat.tenant!.name, formatKcs(fee)));
+        }
+        let next = updateFlat(s, flat.index, (f) => ({
+          ...f,
+          tenant: {
+            ...f.tenant!,
+            happiness: clamp(f.tenant!.happiness + COVER_HELD_TENANT_BONUS, 0, 100),
+          },
+        }));
+        next = { ...next, reputation: clamp(next.reputation + REP_COVER_HELD, 0, 100) };
+        return addLog(next, 'good', CS.spy.coverHeld(flat.tenant!.name));
+      }
       if (flat.tenant!.archetype === 'disident') {
         if (rng.chance(0.5)) {
           const name = flat.tenant!.name;
@@ -219,7 +290,8 @@ export const EVENTS: readonly GameEventDef[] = [
   {
     id: 'satelliteReported',
     weight: 12,
-    condition: (s) => s.upgrades.satellite,
+    // Po revoluci už satelit nikoho nezajímá.
+    condition: (s) => s.upgrades.satellite && preRevolution(s),
     apply: (s) => {
       const fine = Math.round(SATELLITE_FINE * fineMult(s));
       const next = {
@@ -364,7 +436,7 @@ export const EVENTS: readonly GameEventDef[] = [
   {
     id: 'volby',
     weight: 8,
-    condition: (s) => s.pendingChoice === null,
+    condition: (s) => s.pendingChoice === null && preRevolution(s),
     apply: (s) => ({
       ...s,
       pendingChoice: {
@@ -408,6 +480,189 @@ export const EVENTS: readonly GameEventDef[] = [
           options: [
             { id: 'allow', label: texts.allow, disabled: s.money < def.cost },
             { id: 'refuse', label: texts.refuse },
+          ],
+        },
+      };
+    },
+  },
+
+  // --- Seasonal events (v0.9) ---------------------------------------------------
+  {
+    id: 'studenaVoda',
+    weight: 9,
+    duration: [45, 120],
+    apply: (s) => addLog(s, 'bad', CS.events.studenaVoda),
+    onExpire: (s) => addLog(s, 'info', CS.events.studenaVodaEnd),
+  },
+  {
+    id: 'vedro',
+    weight: 14,
+    duration: [60, 150],
+    condition: (s) => inSeason(s, 'summer'),
+    apply: (s) => addLog(s, 'bad', CS.events.vedro),
+    onExpire: (s) => addLog(s, 'info', CS.events.vedroEnd),
+  },
+  {
+    id: 'chripka',
+    weight: 12,
+    duration: [60, 150],
+    condition: (s) => inSeason(s, 'winter'),
+    apply: (s) => addLog(s, 'bad', CS.events.chripka),
+    onExpire: (s) => addLog(s, 'info', CS.events.chripkaEnd),
+  },
+  {
+    id: 'kalamita',
+    weight: 12,
+    condition: (s) => inSeason(s, 'winter') && s.pendingChoice === null,
+    apply: (s) => ({
+      ...s,
+      pendingChoice: {
+        eventId: 'kalamita',
+        title: CS.events.kalamitaTitle,
+        body: CS.events.kalamitaBody,
+        options: [
+          {
+            id: 'shovel',
+            label: CS.events.kalamitaShovel,
+            disabled: s.energy < KALAMITA_ENERGY_COST,
+          },
+          { id: 'skip', label: CS.events.kalamitaSkip },
+        ],
+      },
+    }),
+  },
+  {
+    id: 'mandarinky',
+    weight: 20,
+    condition: (s) => dateFromTick(s.tick).month === 12,
+    apply: (s) => {
+      let next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + MANDARINKY_BONUS, 0, 100),
+      }));
+      next = { ...next, reputation: clamp(next.reputation + REP_MANDARINKY, 0, 100) };
+      return addLog(next, 'good', CS.events.mandarinky);
+    },
+  },
+  {
+    id: 'pomlazka',
+    weight: 10,
+    condition: (s) => inSeason(s, 'spring'),
+    apply: (s) => {
+      const next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + POMLAZKA_BONUS, 0, 100),
+      }));
+      return addLog(next, 'good', CS.events.pomlazka);
+    },
+  },
+  {
+    id: 'blato',
+    weight: 8,
+    condition: (s) => inSeason(s, 'spring'),
+    apply: (s) => {
+      const next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness - BLATO_HIT, 0, 100),
+      }));
+      return addLog(next, 'bad', CS.events.blato);
+    },
+  },
+  {
+    id: 'brambory',
+    weight: 10,
+    condition: (s) =>
+      inSeason(s, 'autumn') && preRevolution(s) && s.pendingChoice === null,
+    apply: (s) => ({
+      ...s,
+      pendingChoice: {
+        eventId: 'brambory',
+        title: CS.events.bramboryTitle,
+        body: CS.events.bramboryBody,
+        options: [
+          { id: 'send', label: CS.events.bramborySend },
+          { id: 'skip', label: CS.events.bramborySkip },
+        ],
+      },
+    }),
+  },
+  {
+    id: 'pliskanice',
+    weight: 8,
+    condition: (s) =>
+      inSeason(s, 'autumn') && allFlats(s).some((f) => f.tenant && !f.problem),
+    apply: (s, rng) => {
+      const candidates = allFlats(s).filter((f) => f.tenant && !f.problem);
+      const target = rng.pick(candidates);
+      const next = updateFlat(s, target.index, (f) => ({ ...f, problem: 'leak' as const }));
+      return addLog(
+        { ...next, stats: { ...next.stats, breakdowns: next.stats.breakdowns + 1 } },
+        'bad',
+        CS.events.pliskanice(CS.ui.flatLabel(target.index + 1)),
+      );
+    },
+  },
+  {
+    id: 'posviceni',
+    weight: 8,
+    condition: (s) => inSeason(s, 'autumn'),
+    apply: (s) => {
+      let next = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + POSVICENI_BONUS, 0, 100),
+      }));
+      next = { ...next, money: Math.max(0, next.money - POSVICENI_COST) };
+      return addLog(next, 'good', CS.events.posviceni);
+    },
+  },
+
+  // --- Svěřování a hlášení (v0.9) -----------------------------------------------
+  {
+    id: 'svereni',
+    weight: 10,
+    condition: (s) =>
+      s.pendingChoice === null &&
+      preRevolution(s) &&
+      s.reputation >= CONFIDE_MIN_REP &&
+      confideCandidates(s).length > 0,
+    apply: (s, rng) => {
+      const flat = rng.pick(confideCandidates(s));
+      const t = flat.tenant!;
+      return {
+        ...s,
+        pendingChoice: {
+          eventId: 'svereni',
+          flatIndex: flat.index,
+          title: CS.events.svereniTitle,
+          body: CS.secrets[t.secret!].confide(t.name),
+          options: [
+            { id: 'accept', label: CS.events.svereniAccept },
+            { id: 'refuse', label: CS.events.svereniRefuse },
+          ],
+        },
+      };
+    },
+  },
+  {
+    id: 'stbHlaseni',
+    weight: 8,
+    condition: (s) =>
+      s.pendingChoice === null &&
+      preRevolution(s) &&
+      s.tick >= HLASENI_MIN_TICK &&
+      knownUnreported(s).length > 0,
+    apply: (s, rng) => {
+      const flat = rng.pick(knownUnreported(s));
+      return {
+        ...s,
+        pendingChoice: {
+          eventId: 'stbHlaseni',
+          flatIndex: flat.index,
+          title: CS.events.hlaseniTitle,
+          body: CS.events.hlaseniBody,
+          options: [
+            { id: 'report', label: CS.events.hlaseniReport(flat.tenant!.name) },
+            { id: 'deny', label: CS.events.hlaseniDeny },
           ],
         },
       };
@@ -600,14 +855,14 @@ const CHOICE_RESOLVERS: Record<
 
   volby: (s, optionId) => {
     if (optionId === 'go') {
-      s = { ...s, reputation: clamp(s.reputation + VOLBY_REP_GO, 0, 100) };
+      s = { ...s, regime: clamp(s.regime + VOLBY_REGIME_GO, 0, 100) };
       s = mapTenants(s, (t) => ({
         ...t,
         happiness: clamp(t.happiness - VOLBY_HAPPINESS_HIT, 0, 100),
       }));
       return addLog(s, 'good', CS.events.volbyWent);
     }
-    s = { ...s, reputation: clamp(s.reputation + VOLBY_REP_SKIP, 0, 100) };
+    s = { ...s, regime: clamp(s.regime + VOLBY_REGIME_SKIP, 0, 100) };
     return addLog(s, 'bad', CS.events.volbySkipped);
   },
 
@@ -616,12 +871,87 @@ const CHOICE_RESOLVERS: Record<
       s = {
         ...s,
         money: s.money - MAJ_DECORATION_COST,
-        reputation: clamp(s.reputation + REP_MAJ_DECORATED, 0, 100),
+        regime: clamp(s.regime + REGIME_MAJ_DECORATED, 0, 100),
       };
       return addLog(s, 'good', CS.events.majDecorated);
     }
-    s = { ...s, reputation: clamp(s.reputation + REP_MAJ_SKIPPED, 0, 100) };
+    s = { ...s, regime: clamp(s.regime + REGIME_MAJ_SKIPPED, 0, 100) };
     return addLog(s, 'bad', CS.events.majSkipped);
+  },
+
+  kalamita: (s, optionId) => {
+    if (optionId === 'shovel' && s.energy >= KALAMITA_ENERGY_COST) {
+      s = {
+        ...s,
+        energy: s.energy - KALAMITA_ENERGY_COST,
+        reputation: clamp(s.reputation + REP_KALAMITA_SHOVELED, 0, 100),
+      };
+      s = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness + KALAMITA_SHOVELED_BONUS, 0, 100),
+      }));
+      return addLog(s, 'good', CS.events.kalamitaShoveled);
+    }
+    s = mapTenants(s, (t) => ({
+      ...t,
+      happiness: clamp(t.happiness - KALAMITA_SKIP_HIT, 0, 100),
+    }));
+    s = { ...s, reputation: clamp(s.reputation + REP_KALAMITA_SKIP, 0, 100) };
+    return addLog(s, 'bad', CS.events.kalamitaSkipped);
+  },
+
+  brambory: (s, optionId) => {
+    if (optionId === 'send') {
+      s = { ...s, regime: clamp(s.regime + BRAMBORY_REGIME, 0, 100) };
+      s = mapTenants(s, (t) => ({
+        ...t,
+        happiness: clamp(t.happiness - BRAMBORY_HAPPINESS_HIT, 0, 100),
+      }));
+      return addLog(s, 'info', CS.events.bramborySent);
+    }
+    s = { ...s, regime: clamp(s.regime + BRAMBORY_SKIP_REGIME, 0, 100) };
+    return addLog(s, 'bad', CS.events.bramborySkipped);
+  },
+
+  svereni: (s, optionId, choice) => {
+    const flatIndex = choice.flatIndex;
+    if (flatIndex === undefined) return s;
+    const flat = allFlats(s).find((f) => f.index === flatIndex);
+    const t = flat?.tenant;
+    if (!t) return s;
+    if (optionId === 'accept') {
+      s = updateFlat(s, flatIndex, (f) => ({
+        ...f,
+        tenant: {
+          ...f.tenant!,
+          secretKnown: true,
+          confided: true,
+          happiness: clamp(f.tenant!.happiness + CONFIDE_TENANT_BONUS, 0, 100),
+        },
+      }));
+      s = {
+        ...s,
+        reputation: clamp(s.reputation + REP_CONFIDE_ACCEPTED, 0, 100),
+        stats: { ...s.stats, confided: s.stats.confided + 1 },
+      };
+      return addLog(s, 'event', CS.spy.confided(t.name));
+    }
+    s = updateFlat(s, flatIndex, (f) => ({
+      ...f,
+      tenant: {
+        ...f.tenant!,
+        happiness: clamp(f.tenant!.happiness - CONFIDE_REFUSED_HIT, 0, 100),
+      },
+    }));
+    return addLog(s, 'info', CS.events.svereniRefused);
+  },
+
+  stbHlaseni: (s, optionId, choice) => {
+    if (optionId === 'report' && choice.flatIndex !== undefined) {
+      return reportTenant(s, choice.flatIndex);
+    }
+    s = { ...s, regime: clamp(s.regime + REGIME_HLASENI_DENIED, 0, 100) };
+    return addLog(s, 'info', CS.events.hlaseniDenied);
   },
 
   prosba: (s, optionId, choice) => {

@@ -9,10 +9,19 @@ import { CS } from './content.cs';
 import { createTenant } from './tenants';
 import { processEvents, majChoice } from './events';
 import { processPlan } from './plans';
-import { dateFromTick, dateJustReached, isSummer, isWinter } from './calendar';
+import { processArrests } from './secrets';
+import {
+  dateFromTick,
+  dateJustReached,
+  isSummer,
+  isWinter,
+  regimeFell,
+  REVOLUTION,
+} from './calendar';
 import {
   addLog,
   allFlats,
+  avgHappiness,
   clamp,
   isEventActive,
   mainBuilding,
@@ -25,13 +34,16 @@ import {
 import {
   BADGE_KUPON_REWARD,
   BRIGADE_ENERGY_MAX,
-  BRIGADE_ENERGY_REGEN,
+  brigadeRegen,
   CARETAKER_FIX_CHANCE,
   CARETAKER_WAGE_PER_SEC,
+  CHRIPKA_PENALTY,
+  comfortExcessLoss,
   COUPLE_ELEVATOR_EXTRA_PENALTY,
   DIGITALKY_FIX_MULT,
   DISIDENT_LOYALTY_REP,
   DISIDENT_LOYALTY_SECONDS,
+  driftToward50,
   EARLY_MOVE_IN_BOOST,
   EARLY_MOVE_IN_MAX_OCCUPIED,
   ELEVATOR_BREAK_CHANCE,
@@ -56,6 +68,8 @@ import {
   LAUNDRY_REGEN_MULT_WEST,
   LAVICKY_PENSIONER_BONUS,
   LEAK_CHANCE,
+  LUSTRACE_COVERED_MIN,
+  LUSTRACE_REPORTED_LIMIT,
   MAX_BUILDINGS,
   MAX_FLOORS,
   MILESTONE_BONY,
@@ -64,6 +78,7 @@ import {
   MOVE_OUT_GRACE_SECONDS,
   MOVE_OUT_HAPPINESS_THRESHOLD,
   moveInChance,
+  KONFIDENT_REPORTED,
   MUSICIAN_MOVE_IN_REP,
   MUSICIAN_NEIGHBOR_DRAG,
   ODSTAVKA_DURATION,
@@ -72,14 +87,20 @@ import {
   PROBLEM_DEFS,
   PROVERENY_STB_VISITS,
   RADIATOR_CHANCE,
+  regimeMoveInMult,
   REP_MILESTONE,
   REP_MOVE_IN,
   REP_MOVE_OUT,
+  REP_REVOLUTION_HERO,
+  REP_REVOLUTION_MINOR,
+  REP_REVOLUTION_TRAITOR,
   SAMOOBSLUHA_TARGET_BONUS,
   SATELLITE_TARGET_BONUS,
   SITES,
   SKOLKA_FAMILY_BONUS,
   SKOLKA_MOVE_IN_MULT,
+  SLUSNY_CLOVEK_COVERED,
+  STUDENA_VODA_PENALTY,
   SUMMER_TARGET_BONUS,
   SUSAK_TARGET_BONUS,
   SVAZAK_NEIGHBOR_DRAG,
@@ -87,6 +108,8 @@ import {
   TV_TARGET_BONUS,
   UDERNIK_CLICKS,
   VANOCE_HAPPINESS_BONUS,
+  VEDRO_PENALTY,
+  VEDRO_PENSIONER_EXTRA,
   VEKSLAK_BON_CHANCE,
   VZORNY_DUM_HAPPINESS,
   WINTER_TARGET_PENALTY,
@@ -156,6 +179,19 @@ export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
     }
   }
 
+  if (isEventActive(s, 'studenaVoda')) {
+    factors.push({ label: F.studenaVoda, delta: -STUDENA_VODA_PENALTY });
+  }
+  if (isEventActive(s, 'vedro')) {
+    factors.push({ label: F.vedro, delta: -VEDRO_PENALTY });
+    if (t?.archetype === 'pensioner') {
+      factors.push({ label: F.vedroPensioner, delta: -VEDRO_PENSIONER_EXTRA });
+    }
+  }
+  if (isEventActive(s, 'chripka')) {
+    factors.push({ label: F.chripka, delta: -CHRIPKA_PENALTY });
+  }
+
   if (flat.problem) {
     factors.push({ label: F[flat.problem], delta: -PROBLEM_DEFS[flat.problem].targetPenalty });
   }
@@ -176,6 +212,12 @@ export function happinessFactors(s: GameState, flat: Flat): HappinessFactor[] {
   if (t?.archetype !== 'musician' && hasNeighbor(s, flat, 'musician')) {
     factors.push({ label: F.musicianDrag, delta: -MUSICIAN_NEIGHBOR_DRAG });
   }
+
+  // Diminishing returns on comfort: the surplus above the knee mostly turns
+  // into vysoké nároky — shown as its own factor so the card still adds up.
+  const positive = factors.reduce((acc, f) => acc + (f.delta > 0 ? f.delta : 0), 0);
+  const loss = comfortExcessLoss(positive);
+  if (loss > 0) factors.push({ label: F.naroky, delta: -loss });
 
   return factors;
 }
@@ -250,6 +292,8 @@ function processEvictions(s: GameState): GameState {
 }
 
 function processMoveIns(s: GameState, rng: Rng): GameState {
+  // Byty přiděluje ONV — a pořadník se hýbe podle kádrového profilu správce.
+  const allocation = regimeMoveInMult(s.regime, regimeFell(s.tick));
   for (const flat of allFlats(s)) {
     if (flat.tenant) continue;
     const earlyBoost =
@@ -257,7 +301,7 @@ function processMoveIns(s: GameState, rng: Rng): GameState {
     const siteMult =
       SITES[s.buildings[flat.bldg].site].moveInMult *
       (s.projects.skolka ? SKOLKA_MOVE_IN_MULT : 1);
-    if (!rng.chance(moveInChance(s.reputation) * earlyBoost * siteMult)) continue;
+    if (!rng.chance(moveInChance(s.reputation) * earlyBoost * siteMult * allocation)) continue;
     const tenant = createTenant(rng, s.nextTenantId, TENANT_STARTING_HAPPINESS, s.tick);
     s = updateFlat(s, flat.index, (f) => ({ ...f, tenant }));
     s = {
@@ -429,9 +473,25 @@ function processCalendar(s: GameState, rng: Rng): GameState {
     s = addLog(s, 'good', CS.events.vanoce);
   }
 
-  // 1. máje: výzdoba vchodu se očekává.
-  if (dateJustReached(s.tick, 5, 1) && s.pendingChoice === null) {
+  // 1. máje: výzdoba vchodu se očekává. Po revoluci už ji nikdo nevymáhá.
+  if (dateJustReached(s.tick, 5, 1) && s.pendingChoice === null && !regimeFell(s.tick)) {
     s = majChoice(s);
+  }
+
+  // 17. listopadu 1989: sametová revoluce. Od téhle chvíle kádrový profil
+  // nikoho nezajímá — a dům si vzpomene, kým jeho správce celou dobu byl.
+  if (dateJustReached(s.tick, REVOLUTION.month, REVOLUTION.day) && date.year === REVOLUTION.year) {
+    s = addLog(s, 'milestone', CS.events.revoluce);
+    if (s.stats.reported >= LUSTRACE_REPORTED_LIMIT) {
+      s = { ...s, reputation: clamp(s.reputation + REP_REVOLUTION_TRAITOR, 0, 100) };
+      s = addLog(s, 'bad', CS.events.revoluceTraitor);
+    } else if (s.stats.reported > 0) {
+      s = { ...s, reputation: clamp(s.reputation + REP_REVOLUTION_MINOR, 0, 100) };
+      s = addLog(s, 'bad', CS.events.revoluceMinor);
+    } else if (s.stats.covered >= LUSTRACE_COVERED_MIN) {
+      s = { ...s, reputation: clamp(s.reputation + REP_REVOLUTION_HERO, 0, 100) };
+      s = addLog(s, 'good', CS.events.revoluceHero);
+    }
   }
 
   return s;
@@ -526,6 +586,8 @@ const BADGE_DEFS: readonly BadgeDef[] = [
   { id: 'budovatel', achieved: (s) => s.buildings.length >= MAX_BUILDINGS },
   { id: 'vzorny', achieved: (s) => s.milestones.vzornyDum },
   { id: 'kapitalista', achieved: (s) => s.meta.prestigeLevel >= 1 },
+  { id: 'slusnyClovek', achieved: (s) => s.stats.covered >= SLUSNY_CLOVEK_COVERED },
+  { id: 'konfident', achieved: (s) => s.stats.reported >= KONFIDENT_REPORTED },
 ];
 
 function checkBadges(s: GameState): GameState {
@@ -557,13 +619,21 @@ export function tick(prev: GameState): GameState {
   let s: GameState = {
     ...prev,
     tick: prev.tick + 1,
-    energy: Math.min(BRIGADE_ENERGY_MAX, prev.energy + BRIGADE_ENERGY_REGEN),
+    // Elán roste s tím, jak se domu daří (spokojenost + důvěra).
+    energy: Math.min(
+      BRIGADE_ENERGY_MAX,
+      prev.energy + brigadeRegen(avgHappiness(prev), prev.reputation),
+    ),
+    // Obě osy pověsti pomalu šednou k průměru — udržet si jméno dá práci.
+    reputation: clamp(driftToward50(prev.reputation), 0, 100),
+    regime: regimeFell(prev.tick) ? prev.regime : clamp(driftToward50(prev.regime), 0, 100),
   };
 
   s = updateHappiness(s);
   s = collectRent(s);
   s = processMoveOuts(s);
   s = processEvictions(s);
+  s = processArrests(s);
   s = processMoveIns(s, rng);
   s = processBreakdowns(s, rng);
   s = processQuirks(s, rng);

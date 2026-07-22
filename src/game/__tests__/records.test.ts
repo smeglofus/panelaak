@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { tick } from '../tick';
 import { applyPrestige } from '../prestige';
-import { decodeSave, encodeSave, migrateSave } from '../state';
+import { decodeSave, encodeSave, migrateSave, SAVE_VERSION } from '../state';
 import { seasonKey, SECONDS_PER_DAY } from '../calendar';
 import type { GameState } from '../types';
 import { freshState, withFloors, withTenant } from './helpers';
@@ -65,7 +65,7 @@ describe('síň slávy records', () => {
     const legacy = { ...old, version: 6, meta: legacyMeta as GameState['meta'] };
     const migrated = migrateSave(legacy, 6);
     expect(migrated.meta.records.fastestVzornyTicks).toBeNull();
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(SAVE_VERSION);
   });
 });
 

@@ -18,12 +18,13 @@ import {
   PLAN_FIRST_AT,
   POVEST_START_REP,
   STARTING_MONEY,
+  STARTING_REGIME,
   STARTING_REPUTATION,
   STRIBRO_START_MONEY,
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export function createDefaultRecords(): Meta['records'] {
   return {
@@ -44,6 +45,8 @@ export function createDefaultBadges(): Meta['badges'] {
     budovatel: false,
     vzorny: false,
     kapitalista: false,
+    slusnyClovek: false,
+    konfident: false,
   };
 }
 
@@ -99,6 +102,7 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
     money: STARTING_MONEY + STRIBRO_START_MONEY * m.perks.stribro,
     totalEarned: 0,
     reputation: Math.min(100, STARTING_REPUTATION + POVEST_START_REP * m.perks.povest),
+    regime: STARTING_REGIME,
     energy: BRIGADE_ENERGY_MAX,
     buildings: [building],
     meta: m,
@@ -130,6 +134,10 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
       brigadeClicks: 0,
       stbVisits: 0,
       repairsDone: 0,
+      spied: 0,
+      confided: 0,
+      covered: 0,
+      reported: 0,
     },
     nextTenantId: 2,
     lastSaved: Date.now(),
@@ -319,6 +327,44 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
       buildings: g.buildings.map((b) => ({
         ...b,
         flats: b.flats.map((f) => ({ ...f, renovation: f.renovation ?? 0 })),
+      })),
+    };
+  }
+  if (fromVersion < 9) {
+    // v9 added the kádrový profil axis and the secrets layer. Existing tenants
+    // get the secrets their archetype makes obvious; the rest stay spořádaní
+    // (new move-ins roll properly).
+    g = {
+      ...g,
+      version: 9,
+      regime: STARTING_REGIME,
+      stats: { ...g.stats, spied: 0, confided: 0, covered: 0, reported: 0 },
+      meta: {
+        ...g.meta,
+        badges: { ...createDefaultBadges(), ...g.meta.badges },
+      },
+      buildings: g.buildings.map((b) => ({
+        ...b,
+        flats: b.flats.map((f) =>
+          f.tenant
+            ? {
+                ...f,
+                tenant: {
+                  ...f.tenant,
+                  secret:
+                    f.tenant.archetype === 'vekslak'
+                      ? ('veksl' as const)
+                      : f.tenant.archetype === 'disident'
+                        ? ('samizdat' as const)
+                        : null,
+                  secretKnown: false,
+                  confided: false,
+                  covered: false,
+                  arrestAt: null,
+                },
+              }
+            : f,
+        ),
       })),
     };
   }

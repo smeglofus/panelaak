@@ -5,7 +5,7 @@ import type { BadgeId, CourtyardId, MilestoneId, PerkId, ProjectId, RepeatableId
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/state';
-import { dateFromTick, formatDateCs, isWinter, seasonEmoji } from '../game/calendar';
+import { dateFromTick, formatDateCs, isWinter, regimeFell, seasonEmoji } from '../game/calendar';
 import { computeKupony, privatizaceAvailable, privatizaceRumoured } from '../game/prestige';
 import { describePlan, planProgress } from '../game/plans';
 import { SECONDS_PER_DAY } from '../game/calendar';
@@ -87,6 +87,7 @@ export default function SidePanel() {
   const anythingBroken = brokenElevators.length > 0 || problems.length > 0;
   const date = dateFromTick(game.tick);
   const winter = isWinter(date);
+  const fell = regimeFell(game.tick);
 
   return (
     <aside className="panel">
@@ -115,8 +116,12 @@ export default function SidePanel() {
 
       <div className="stat-grid">
         <div className="stat">
-          <span className="stat-label">{CS.ui.reputation}</span>
+          <span className="stat-label">🤝 {CS.ui.reputation}</span>
           <span className="stat-value">{Math.round(game.reputation)} %</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">☭ {fell ? CS.ui.regimeGone : CS.ui.regime}</span>
+          <span className="stat-value">{fell ? '—' : `${Math.round(game.regime)} %`}</span>
         </div>
         <div className="stat">
           <span className="stat-label">{CS.ui.avgHappiness}</span>
@@ -177,7 +182,7 @@ export default function SidePanel() {
             </p>
           </>
         ) : (
-          <p className="brigade-hint">{CS.plans.none}</p>
+          <p className="brigade-hint">{fell ? CS.plans.dissolved : CS.plans.none}</p>
         )}
       </section>
 

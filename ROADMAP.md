@@ -87,6 +87,32 @@ jádra: logika bez Reactu, texty v `content.cs.ts`, čísla v `economy.ts`.
   Kulturní dům (2,5 M) — obří cíle viditelné ve scéně
 - Privatizace viditelná od začátku hry (teaser → šeptanda → dostupná)
 
+## v0.9 „Důvěrník“ *(hotovo — dvě osy a tajemství)*
+
+- **Dvě osy pověsti** — reputace rozdělena na **Důvěru sousedů** (nastěhování,
+  svěřování, sousedské eventy) a **Kádrový profil** (volby, 1. máj, kontroly
+  KSČ, plnění pětiletek; mírnější pokuty a rychlejší pořadník ONV). Obě osy
+  pomalu driftují k 50 — jméno se musí udržovat.
+- **Balanc spokojenosti** — klesající výnosy z komfortu: pozitivní vlivy nad
+  +12 se počítají jen z 35 %, přebytek karta ukazuje jako „vysoké nároky“.
+  Konec parkování na 90–100 %.
+- **Elán podle nálady** — regenerace 1,5–6/s podle spokojenosti domu a důvěry
+  (dřív plochá 4/s). Komu se daří, tomu se chce.
+- **Sezónní eventy** — havárie vody (neteče nic), letní vedro, zimní chřipka
+  a sněhová kalamita (brigáda za elán), prosincové mandarinky, pomlázka,
+  jarní bláto, brigáda na brambory (volba), plískanice, posvícení.
+- **Tajemství nájemníků** — archetypy skrývají samizdat, Svobodnou Evropu,
+  veksl, melouchy, dopisy na Západ i černou pálenici. Správce může **šmírovat**
+  (za elán, s rizikem přistižení), nebo si získat důvěru a nechat si věci
+  **svěřit**. Známé tajemství lze **krýt** (důvěra, ochrana před StB — ale
+  riziko průšvihu při návštěvě) nebo **udat** (kádrový profil + bony, v šest
+  ráno pro souseda přijedou a dům si to pamatuje). StB si občas řekne
+  o hlášení sama.
+- **Sametová revoluce** — 17. listopadu 1989 (každou éru) režimové eventy
+  končí, výbor se rozpouští a dům se rozpomene: hrdinům stoupne důvěra,
+  práskačům spadne. Privatizaci pak soudí **lustrace** (±kupóny) a kádrový
+  posudek zná odznaky Slušný člověk i Konfident.
+
 ## Nápady dál
 
 - Tauri desktop build pro Steam, pixel-art jako alternativní skin, další questy
