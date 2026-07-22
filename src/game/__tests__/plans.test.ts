@@ -4,6 +4,7 @@ import { describePlan, PLAN_DEFS, processPlan } from '../plans';
 import { createRng } from '../rng';
 import type { ActivePlan, GameState } from '../types';
 import {
+  FIX_PLAN_SUPPLY_INTERVAL,
   flatRenoCost,
   FLAT_RENO_MAX,
   incomePerSec,
@@ -12,6 +13,7 @@ import {
   SKOLKA_MOVE_IN_MULT,
 } from '../economy';
 import { happinessTarget } from '../tick';
+import { allFlats, updateFlat } from '../state';
 import { freshState, withFloors, withTenant } from './helpers';
 
 function brigadePlan(s: GameState): ActivePlan {
@@ -24,6 +26,19 @@ function brigadePlan(s: GameState): ActivePlan {
     rewardKcs: 500,
     rewardBony: 1,
     rewardKupon: true,
+  };
+}
+
+function fixPlan(s: GameState, target = 3): ActivePlan {
+  return {
+    id: 'fix',
+    target,
+    baseline: s.stats.repairsDone,
+    progress: 0,
+    deadline: s.tick + 600,
+    rewardKcs: 500,
+    rewardBony: 1,
+    rewardKupon: false,
   };
 }
 
@@ -62,6 +77,33 @@ describe('pětiletka', () => {
     s = processPlan(s, createRng(1));
     expect(s.plan).toBeNull();
     expect(s.reputation).toBeLessThan(before);
+  });
+
+  it('a fix plan breaks something when there is nothing to repair', () => {
+    // Two occupied flats, no elevator, nothing broken: an unlucky run where the
+    // player would otherwise be stuck failing the quota.
+    let s = withTenant(withTenant(withFloors(freshState(), 1), 0), 1);
+    s = { ...s, tick: FIX_PLAN_SUPPLY_INTERVAL, plan: fixPlan(s), nextPlanAt: 999999 };
+    expect(allFlats(s).some((f) => f.problem)).toBe(false);
+
+    const before = s.stats.breakdowns;
+    s = processPlan(s, createRng(1));
+
+    expect(s.stats.breakdowns).toBe(before + 1);
+    expect(allFlats(s).some((f) => f.problem)).toBe(true);
+    expect(s.plan).not.toBeNull(); // injecting work does not complete the plan
+  });
+
+  it('a fix plan does not pile on beyond the outstanding shortfall', () => {
+    // Needs 1, already has 1 broken flat → nothing new should break.
+    let s = withTenant(withFloors(freshState(), 1), 0);
+    s = updateFlat(s, 0, (f) => ({ ...f, problem: 'leak' }));
+    s = { ...s, tick: FIX_PLAN_SUPPLY_INTERVAL, plan: fixPlan(s, 1), nextPlanAt: 999999 };
+
+    const before = s.stats.breakdowns;
+    s = processPlan(s, createRng(1));
+
+    expect(s.stats.breakdowns).toBe(before);
   });
 
   it('happy plan accumulates ticks above the threshold', () => {

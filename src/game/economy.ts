@@ -250,6 +250,13 @@ export const PLAN_FAIL_REP = -3;
 export const PLAN_HAPPY_THRESHOLD = 75;
 /** Chance a plan carries a kupón on top of the usual reward. */
 export const PLAN_KUPON_CHANCE = 0.25;
+/**
+ * A "fix N things" plan is unwinnable if nothing happens to break. While one
+ * runs and the player has fewer outstanding repairs than the plan still needs,
+ * let something break on this cadence (seconds) so the quota always comes with
+ * the work to meet it — up to the shortfall, never a flood.
+ */
+export const FIX_PLAN_SUPPLY_INTERVAL = 45;
 
 // --- Kádrový posudek (badges) -----------------------------------------------------
 

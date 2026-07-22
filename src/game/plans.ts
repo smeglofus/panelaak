@@ -5,8 +5,10 @@
 import type { ActivePlan, GameState, PlanId } from './types';
 import type { Rng } from './rng';
 import { CS } from './content.cs';
-import { addLog, allFlats, avgHappiness, clamp, totalFloors } from './state';
+import { addLog, allFlats, avgHappiness, clamp, totalFloors, updateFlat } from './state';
 import {
+  ELEVATOR_MIN_FLOORS,
+  FIX_PLAN_SUPPLY_INTERVAL,
   formatKcs,
   incomePerSec,
   PLAN_COOLDOWN,
@@ -56,6 +58,11 @@ export const PLAN_DEFS: readonly PlanDef[] = [
     id: 'fix',
     weight: 18,
     days: 20,
+    // Needs a source of breakdowns to be fair — a tenant whose flat can leak
+    // or an elevator that can fail. ensureFixSupply keeps that source topped up.
+    condition: (s) =>
+      allFlats(s).some((f) => f.tenant) ||
+      s.buildings.some((b) => b.floors >= ELEVATOR_MIN_FLOORS),
     make: (s) => ({
       target: 2 + s.buildings.length,
       baseline: s.stats.repairsDone,
@@ -134,6 +141,45 @@ export function planProgress(s: GameState, plan: ActivePlan): number {
   return clamp(def.progressOf(s, plan), 0, plan.target);
 }
 
+/** Broken things the player could repair right now (elevators + flat problems). */
+function outstandingRepairs(s: GameState): number {
+  const elevators = s.buildings.filter((b) => b.elevatorBroken).length;
+  const problems = allFlats(s).filter((f) => f.problem).length;
+  return elevators + problems;
+}
+
+/**
+ * A repair pětiletka that hands you nothing to repair is unwinnable. While a
+ * fix plan is short of the work it still needs, let one thing break on a timer
+ * — a leak, or failing that an elevator — so the assignment is always
+ * achievable by actually fixing things, without ever piling on more than the
+ * remaining shortfall. Reuses the ordinary breakdown toasts so the player just
+ * sees a normal repair to do.
+ */
+function ensureFixSupply(s: GameState, rng: Rng): GameState {
+  const plan = s.plan;
+  if (!plan || plan.id !== 'fix' || s.tick % FIX_PLAN_SUPPLY_INTERVAL !== 0) return s;
+
+  const needed = plan.target - planProgress(s, plan);
+  if (outstandingRepairs(s) >= needed) return s;
+
+  const leakable = allFlats(s).filter((f) => f.tenant && !f.problem);
+  if (leakable.length > 0) {
+    const target = rng.pick(leakable);
+    s = updateFlat(s, target.index, (f) => ({ ...f, problem: 'leak' as const }));
+    s = { ...s, stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 } };
+    return addLog(s, 'bad', CS.toasts.leak(CS.ui.flatLabel(target.index + 1)));
+  }
+
+  const bi = s.buildings.findIndex((b) => b.floors >= ELEVATOR_MIN_FLOORS && !b.elevatorBroken);
+  if (bi >= 0) {
+    const buildings = s.buildings.map((b, i) => (i === bi ? { ...b, elevatorBroken: true } : b));
+    s = { ...s, buildings, stats: { ...s.stats, breakdowns: s.stats.breakdowns + 1 } };
+    return addLog(s, 'bad', CS.toasts.elevatorBroke(CS.sites[s.buildings[bi].site].name));
+  }
+  return s;
+}
+
 /** One tick of the pětiletka machinery: issue, advance, resolve. */
 export function processPlan(s: GameState, rng: Rng): GameState {
   if (!s.plan) {
@@ -150,6 +196,8 @@ export function processPlan(s: GameState, rng: Rng): GameState {
     plan = { ...plan, progress: plan.progress + 1 };
     s = { ...s, plan };
   }
+
+  s = ensureFixSupply(s, rng);
 
   if (planProgress(s, plan) >= plan.target) {
     s = {
