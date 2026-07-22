@@ -8,7 +8,9 @@ An idle/management browser game: you run a prefab apartment block (panelák) in
 Game content is intentionally in Czech — it's part of the identity. Code,
 comments and identifiers are in English.
 
-Built per [spec.md](spec.md) (MVP v0.1).
+Built per [spec.md](spec.md), now well past the MVP — see
+[ROADMAP.md](ROADMAP.md) for the full version history (currently **v0.8
+"Pětiletka"**).
 
 ![screenshot](docs/screenshot.png)
 
@@ -146,7 +148,11 @@ floor ~2–3 min, full 8-floor building in ~2–3 hours of mixed play.
 
 ## Roadmap
 
-- **v0.2** — pixel-art sprite pass, sound (elevator ding, sídliště ambience),
-  more events, English toggle, proper mobile layout.
-- **v0.3+** — prestige: *privatizace 1991*. `GameState` is already shaped for
-  it (`buildings: Building[]`, `meta.prestigeLevel`).
+Full version history and what's next live in [ROADMAP.md](ROADMAP.md). Shipped
+through **v0.8 "Pětiletka"**: sound and an English toggle (v0.6), seasons and a
+hall of fame (v0.7), the *privatizace* prestige loop (v0.4), up to three
+paneláky with a kádrový posudek (v0.5), and a five-year-plan late game with
+flat renovations and mega-projects (v0.8).
+
+Next up: a **desktop / Steam build** (a Tauri wrapper so the game ships as a
+downloadable executable) and further content.
