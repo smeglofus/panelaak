@@ -124,13 +124,14 @@ export function createTenant(
   happiness: number,
   tick: number,
   forcedArchetype?: ArchetypeId,
+  forcedName?: string,
 ): Tenant {
   const archetype = forcedArchetype ?? pickWeighted(ARCHETYPE_LIST, rng).id;
   const pool = CS.archetypes[archetype];
   return {
     id,
     archetype,
-    name: rng.pick(pool.names),
+    name: forcedName ?? rng.pick(pool.names),
     flavor: rng.pick(pool.flavor),
     happiness,
     unhappySince: null,

@@ -4,6 +4,7 @@
 import type { CSSProperties } from 'react';
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
+import { tenantImage } from '../tenantImages';
 
 interface Props {
   flat: Flat;
@@ -37,6 +38,7 @@ function weatheringStyle(index: number): CSSProperties {
 export default function FlatCell({ flat, selected, onSelect }: Props) {
   const t = flat.tenant;
   const tier = !t ? 'empty' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
+  const portrait = t ? tenantImage(t.archetype) : undefined;
 
   return (
     <button
@@ -51,7 +53,12 @@ export default function FlatCell({ flat, selected, onSelect }: Props) {
       }
     >
       <span className={`window window-${tier} window-reno-${flat.renovation}`}>
-        {t && <span className="tenant-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>}
+        {t &&
+          (portrait ? (
+            <img className="tenant-portrait" src={portrait} alt="" />
+          ) : (
+            <span className="tenant-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>
+          ))}
       </span>
       {flat.problem && (
         <span className="problem-icon">{flat.problem === 'leak' ? '💧' : '⚽'}</span>

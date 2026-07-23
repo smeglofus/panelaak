@@ -27,9 +27,9 @@ describe('rent accrual', () => {
   it('adds rent for the occupied flat on each tick', () => {
     const s = freshState();
     const tenant = s.buildings[0].flats[0].tenant!;
-    expect(tenant.archetype).toBe('shift');
+    expect(tenant.archetype).toBe('pensioner'); // paní Vlasta opens every game
     // Tenant sits exactly at the happiness target (70), so no drift this tick.
-    const expected = rentPerSec(ARCHETYPES.shift.rentMult, tenant.happiness);
+    const expected = rentPerSec(ARCHETYPES.pensioner.rentMult, tenant.happiness);
     const next = tick(s);
     expect(next.money).toBeCloseTo(s.money + expected, 5);
     expect(next.totalEarned).toBeCloseTo(expected, 5);

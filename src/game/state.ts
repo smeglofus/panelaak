@@ -89,10 +89,18 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
   const rng = createRng(rngSeed);
   const m = meta ?? createDefaultMeta();
 
-  // Start with one floor, two flats, and one reliable tenant already home —
-  // the game must feel alive within the first minute (spec §2).
+  // Start with one floor, two flats, and one tenant already home — the game
+  // must feel alive within the first minute (spec §2). Paní Vlasta (+ Azor) is
+  // the fixed opening neighbour of every playthrough.
   const building: Building = createBuilding(0, 0, 0);
-  building.flats[0].tenant = createTenant(rng, 1, TENANT_STARTING_HAPPINESS + 10, 0, 'shift');
+  building.flats[0].tenant = createTenant(
+    rng,
+    1,
+    TENANT_STARTING_HAPPINESS + 10,
+    0,
+    'pensioner',
+    'Paní Vlasta (+ Azor)',
+  );
 
   return {
     version: SAVE_VERSION,

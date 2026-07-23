@@ -17,6 +17,7 @@ import {
 } from '../game/economy';
 import { happinessFactors } from '../game/tick';
 import { useGame } from '../game/store';
+import { tenantImage } from '../tenantImages';
 
 interface Props {
   flat: Flat;
@@ -49,6 +50,7 @@ export default function TenantCard({ flat, onClose }: Props) {
       </button>
     );
   const factors = t ? happinessFactors(game, flat) : [];
+  const portrait = t ? tenantImage(t.archetype) : undefined;
   const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
@@ -60,7 +62,11 @@ export default function TenantCard({ flat, onClose }: Props) {
       {t ? (
         <>
           <div className="card-head">
-            <span className="card-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>
+            {portrait ? (
+              <img className="card-portrait" src={portrait} alt="" />
+            ) : (
+              <span className="card-emoji">{ARCHETYPE_EMOJI[t.archetype]}</span>
+            )}
             <div>
               <strong>{t.name}</strong>
               <span className="card-archetype">
