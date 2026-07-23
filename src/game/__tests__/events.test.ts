@@ -164,7 +164,8 @@ describe('melouch', () => {
 
 describe('jitrnice', () => {
   it('needs the crane operator and lifts the whole house', () => {
-    const s = freshState(); // Marta (shift) lives in flat 0 from the start
+    // Put a crane operator (jeřábnice) in the house — the event needs one.
+    const s = withTenant(freshState(), 0, { archetype: 'shift' });
     expect(eligibleEvents(s).map((e) => e.id)).toContain('jitrnice');
     const before = s.buildings[0].flats[0].tenant!.happiness;
     const next = def('jitrnice').apply(s, createRng(1));
