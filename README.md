@@ -157,10 +157,19 @@ VITE_API_BASE=https://api.example.com npm run build
 Both are cross-origin, which the backend allows by default. Narrow it with the
 `CORS_ORIGIN` env var (comma-separated allowlist) if you'd rather not run open.
 
-For a real deployment behind Traefik: set your domain in the
-`traefik.http.routers.panelak.rule` label in
-[docker-compose.yml](docker-compose.yml), uncomment the external `web` network
-block, and drop the `ports:` mapping. A healthcheck is built into the image.
+For a real deployment behind Traefik:
+
+```bash
+echo "DOMAIN=panelaak.shelfy.cz" >> .env
+# then in docker-compose.yml: uncomment both `networks:` blocks,
+# drop the `ports:` mapping on panelak
+docker compose up --build -d
+```
+
+That publishes two routes to the same stack — the game on `$DOMAIN` (with
+`/api` proxied on the same origin, so no CORS) and the API also on
+`api.$DOMAIN` for clients that can't use a relative path. Both need a DNS
+record pointing at the host. Healthchecks are built into both images.
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint + tests +
 build + docker build on every push; pushing the image to a registry is left as

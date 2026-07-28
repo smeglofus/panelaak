@@ -1,6 +1,16 @@
 # `docker compose up` serves the game on http://localhost:8080 out of the box.
-# The Traefik labels are inert until you attach the service to a Traefik
-# network — see the commented block at the bottom and the README.
+#
+# For a real deployment behind Traefik, set the domain and switch the network on:
+#
+#   1. echo "DOMAIN=panelaak.shelfy.cz" >> .env      # or export DOMAIN=…
+#   2. uncomment the two `networks:` blocks below (service + top level)
+#   3. drop the `ports:` mapping on panelak (Traefik reaches it over the network)
+#
+# nginx inside the panelak image already proxies /api/ to the api service, so
+# the game and the leaderboard share one origin — no CORS, one certificate.
+# The api service also gets its own hostname (api.$DOMAIN) for clients that
+# can't use a relative path: a desktop build loading from file://, or the
+# GitHub Pages copy. Both routes reach the same container.
 
 services:
   panelak:
@@ -20,8 +30,7 @@ services:
       start_period: 5s
     labels:
       - "traefik.enable=true"
-      # Replace the host rule with your domain:
-      - "traefik.http.routers.panelak.rule=Host(`panelak.example.com`)"
+      - "traefik.http.routers.panelak.rule=Host(`${DOMAIN:-panelaak.shelfy.cz}`)"
       - "traefik.http.routers.panelak.entrypoints=websecure"
       - "traefik.http.routers.panelak.tls.certresolver=letsencrypt"
       - "traefik.http.services.panelak.loadbalancer.server.port=80"
@@ -29,7 +38,8 @@ services:
     # networks:
     #   - web
 
-  # Leaderboard API. nginx (in the panelak image) proxies /api/ here.
+  # Leaderboard API. nginx (in the panelak image) proxies /api/ here, and
+  # Traefik also publishes it directly on api.$DOMAIN.
   api:
     build: ./server
     image: panelak-leaderboard:latest
@@ -37,6 +47,10 @@ services:
     environment:
       - PORT=3001
       - DB_PATH=/data/leaderboard.db
+      # Leave unset to answer any origin (public vanity board, no cookies).
+      # Set a comma-separated allowlist to narrow it — remember that a desktop
+      # build sends `Origin: null`, so include that if you lock this down.
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
     volumes:
       - leaderboard-data:/data
     healthcheck:
@@ -49,6 +63,14 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.panelak-api.rule=Host(`api.${DOMAIN:-panelaak.shelfy.cz}`)"
+      - "traefik.http.routers.panelak-api.entrypoints=websecure"
+      - "traefik.http.routers.panelak-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.panelak-api.loadbalancer.server.port=3001"
+    # networks:
+    #   - web
 
 volumes:
   leaderboard-data:
