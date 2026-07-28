@@ -28,12 +28,12 @@ import {
   HEATING_COST_PER_FLOOR,
   incomePerSec,
   KAVA_COST_BONY,
-  MAX_BUILDINGS,
-  MAX_FLOORS,
+  buildingCap,
+  plotCost,
+  SITES,
   PERK_COSTS,
   PERK_MAX,
   PROBLEM_DEFS,
-  PLOT_COSTS,
   PROJECT_COSTS,
   PROJECT_ORDER,
   repeatableCost,
@@ -105,6 +105,12 @@ export default function SidePanel() {
   const date = dateFromTick(game.tick);
   const winter = isWinter(date);
   const fell = regimeFell(game.tick);
+
+  // Sídliště: which parcels are free, how many houses this éra allows, next price.
+  const parcelCap = buildingCap(game.meta.prestigeLevel);
+  const takenSites = new Set(game.buildings.map((b) => b.site));
+  const availableParcels = SITES.map((_, i) => i).filter((i) => !takenSites.has(i));
+  const nextPlotCost = plotCost(game.buildings.length);
 
   // --- Tab: Dům (build & upgrade) -------------------------------------------
   const dumTab = (
@@ -231,25 +237,35 @@ export default function SidePanel() {
             </li>
           ))}
         </ul>
-        {game.buildings.length < MAX_BUILDINGS &&
-          (game.buildings[game.buildings.length - 1].floors >= MAX_FLOORS ? (
-            <button
-              type="button"
-              className="btn btn-brigade"
-              disabled={game.money < PLOT_COSTS[game.buildings.length]}
-              onClick={buyPlot}
-            >
-              🏗️{' '}
-              {CS.sidliste.buyPlot(
-                CS.sites[game.buildings.length].name,
-                formatKcs(PLOT_COSTS[game.buildings.length]),
-              )}
-            </button>
-          ) : (
-            <p className="brigade-hint">{CS.sidliste.needFullHouse}</p>
-          ))}
-        {game.buildings.length >= MAX_BUILDINGS && (
-          <p className="brigade-hint">{CS.sidliste.complete}</p>
+        {availableParcels.length === 0 ? (
+          <p className="brigade-hint">{CS.sidliste.allBuilt}</p>
+        ) : game.buildings.length >= parcelCap ? (
+          <p className="brigade-hint">{CS.sidliste.capReached(parcelCap)}</p>
+        ) : (
+          <>
+            <p className="brigade-hint">{CS.sidliste.pickParcel(formatKcs(nextPlotCost))}</p>
+            {availableParcels.map((i) => (
+              <div key={i} className="upgrade">
+                <div className="upgrade-text">
+                  <strong>
+                    {CS.sites[i].name}
+                    {CS.sites[i].factor && (
+                      <span className="level-badge"> {CS.sites[i].factor}</span>
+                    )}
+                  </strong>
+                  <span>{CS.sites[i].desc}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={game.money < nextPlotCost}
+                  onClick={() => buyPlot(i)}
+                >
+                  🏗️ {CS.sidliste.buildHere}
+                </button>
+              </div>
+            ))}
+          </>
         )}
       </section>
     </>
