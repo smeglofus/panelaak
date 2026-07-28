@@ -14,6 +14,27 @@ const PID_KEY = 'panelak-player-id';
 const NAME_KEY = 'panelak-player-name';
 const ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 
+/**
+ * Where the API lives. Empty (the default) means a relative /api path — right
+ * for the docker-compose deployment, where nginx proxies /api to the backend
+ * on the same origin. Builds that have no nginx in front of them (GitHub Pages,
+ * and later a desktop .exe, which loads from file:// and has no origin to be
+ * relative to) set VITE_API_BASE to the public https URL of the backend at
+ * build time. Trailing slashes are trimmed so both forms concatenate cleanly.
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '');
+
+/** True when this build has no API to talk to and no nginx to proxy one. */
+export function apiConfigured(): boolean {
+  // A relative path only resolves against an http(s) origin; a desktop build
+  // opened from file:// would resolve it against the filesystem and always fail.
+  return API_BASE !== '' || window.location.protocol.startsWith('http');
+}
+
+function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
 /** Stable anonymous id for this browser; created and stored on first use. */
 export function playerId(): string {
   let id = localStorage.getItem(PID_KEY);
@@ -38,8 +59,9 @@ export async function submitScore(input: {
   era: number;
   kupony: number;
 }): Promise<{ ok: boolean; rank?: number }> {
+  if (!apiConfigured()) return { ok: false };
   try {
-    const res = await fetch('/api/score', {
+    const res = await fetch(apiUrl('/api/score'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerId: playerId(), name: playerName(), ...input }),
@@ -53,8 +75,9 @@ export async function submitScore(input: {
 }
 
 export async function fetchLeaderboard(limit = 20): Promise<LeaderboardEntry[] | null> {
+  if (!apiConfigured()) return null;
   try {
-    const res = await fetch(`/api/leaderboard?limit=${limit}`);
+    const res = await fetch(apiUrl(`/api/leaderboard?limit=${limit}`));
     if (!res.ok) return null;
     const data = (await res.json()) as { entries: LeaderboardEntry[] };
     return data.entries;

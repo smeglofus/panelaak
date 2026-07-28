@@ -133,12 +133,29 @@ docker compose up --build    # → http://localhost:8080
 `docker compose up` also starts the **leaderboard API** ([server/](server/) —
 Fastify + SQLite): nginx proxies `/api/` to it, scores live in a persistent
 volume. The game works fine without it (the leaderboard section just shows
-"unavailable"), so the static-only GitHub Pages build is unaffected. For local
-dev run the backend alongside Vite:
+"unavailable"). For local dev run the backend alongside Vite:
 
 ```bash
 cd server && npm install && npm run dev   # :3001, Vite proxies /api to it
 ```
+
+### Leaderboard from other builds (Pages, desktop)
+
+The relative `/api` path only works where nginx proxies it — i.e. the
+docker-compose deployment. Builds served without that proxy need the backend's
+public URL baked in at build time:
+
+```bash
+VITE_API_BASE=https://api.example.com npm run build
+```
+
+- **GitHub Pages:** set the `VITE_API_BASE` repository variable; CI passes it to
+  the Pages build. Without it the game still deploys, minus the leaderboard.
+- **Desktop build (.exe):** same variable — a `file://` build has no origin to
+  resolve a relative path against, so the URL is required.
+
+Both are cross-origin, which the backend allows by default. Narrow it with the
+`CORS_ORIGIN` env var (comma-separated allowlist) if you'd rather not run open.
 
 For a real deployment behind Traefik: set your domain in the
 `traefik.http.routers.panelak.rule` label in

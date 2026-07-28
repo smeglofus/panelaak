@@ -3,6 +3,7 @@
 // validation here is sanity + light rate-limiting, not anti-cheat (see issue #5).
 
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { upsertScore, topScores, rankForScore } from './db';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -11,6 +12,16 @@ const SCORE_MAX = 1e15; // absurd ceiling; anything above is a bad payload
 const POST_COOLDOWN_MS = 5000;
 
 const app = Fastify({ logger: true });
+
+// The board is served cross-origin to builds that aren't behind our nginx:
+// GitHub Pages (https://…github.io) and desktop builds (origin `file://`,
+// `null` or `app://`). No cookies or auth are involved, so a wildcard is the
+// honest default; set CORS_ORIGIN to a comma-separated allowlist to narrow it.
+const corsEnv = process.env.CORS_ORIGIN?.trim();
+await app.register(cors, {
+  origin: !corsEnv || corsEnv === '*' ? true : corsEnv.split(',').map((o) => o.trim()),
+  methods: ['GET', 'POST'],
+});
 
 // Per-player submit cooldown (in-memory; fine for a single small instance).
 const lastPost = new Map<string, number>();
