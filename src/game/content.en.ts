@@ -213,6 +213,7 @@ export const EN: typeof CS = {
     offline: 'Leaderboard unavailable (needs the backend).',
     rateLimited: 'One moment, comrade. Scores are accepted once every few seconds.',
     rejected: 'The committee rejected the score. Try again.',
+    autoSubmit: 'Report my score automatically (hourly, while playing)',
     loading: 'Loading…',
     empty: 'No scores yet. Be the first, comrade.',
     refresh: 'Refresh',

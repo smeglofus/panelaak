@@ -235,6 +235,7 @@ export const CS = {
     offline: 'Žebříček je nedostupný (běží jen s backendem).',
     rateLimited: 'Moment, soudruhu. Skóre se přijímá jednou za pár vteřin.',
     rejected: 'Skóre neprošlo kontrolou u výboru. Zkus to znovu.',
+    autoSubmit: 'Hlásit skóre samo (jednou za hodinu, když hraješ)',
     loading: 'Načítám…',
     empty: 'Zatím žádná skóre. Buď první, soudruhu.',
     refresh: 'Obnovit',

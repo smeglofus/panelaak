@@ -7,8 +7,11 @@ import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { formatKcs } from '../game/economy';
 import {
+  autoSubmitEnabled,
   fetchLeaderboard,
+  markSubmitted,
   playerName,
+  setAutoSubmitEnabled,
   setPlayerName,
   submitScore,
   type LeaderboardEntry,
@@ -21,6 +24,7 @@ export default function LeaderboardPanel() {
   const [name, setName] = useState(playerName());
   const [status, setStatus] = useState('');
   const [sending, setSending] = useState(false);
+  const [auto, setAuto] = useState(autoSubmitEnabled());
 
   // Best of the richest completed era and the current era's running total —
   // so even a player who hasn't privatized yet has a meaningful score.
@@ -49,6 +53,13 @@ export default function LeaderboardPanel() {
       });
       if (res.ok) {
         setStatus(CS.leaderboard.submitted(res.rank ?? 0));
+        markSubmitted(myScore);
+        // Submitting by hand is the opt-in for keeping the entry fresh; the
+        // switch below turns it back off.
+        if (!autoSubmitEnabled()) {
+          setAutoSubmitEnabled(true);
+          setAuto(true);
+        }
         void load();
       } else {
         // A refused submit is not a missing backend — say which it was.
@@ -80,6 +91,18 @@ export default function LeaderboardPanel() {
         {CS.leaderboard.submit}
       </button>
       {status && <p className="brigade-hint">{status}</p>}
+
+      <label className="lb-auto">
+        <input
+          type="checkbox"
+          checked={auto}
+          onChange={(e) => {
+            setAutoSubmitEnabled(e.target.checked);
+            setAuto(e.target.checked);
+          }}
+        />
+        <span>{CS.leaderboard.autoSubmit}</span>
+      </label>
 
       {loading ? (
         <p className="brigade-hint">{CS.leaderboard.loading}</p>

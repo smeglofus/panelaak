@@ -12,7 +12,13 @@ export interface LeaderboardEntry {
 
 const PID_KEY = 'panelak-player-id';
 const NAME_KEY = 'panelak-player-name';
+const AUTO_KEY = 'panelak-lb-auto';
+const LAST_AT_KEY = 'panelak-lb-last-at';
+const LAST_SCORE_KEY = 'panelak-lb-last-score';
 const ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** How often an opted-in player's score is resent while they keep playing. */
+export const AUTO_SUBMIT_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * Where the API lives. Empty (the default) means a relative /api path — right
@@ -52,6 +58,52 @@ export function playerName(): string {
 
 export function setPlayerName(name: string): void {
   localStorage.setItem(NAME_KEY, name.slice(0, 24));
+}
+
+// --- Automatic resubmission --------------------------------------------------
+// Nothing is ever sent on its own until the player has submitted once by hand:
+// that click is the opt-in, and it's also what gives them a nickname. From then
+// on the score is refreshed in the background so the board doesn't go stale,
+// and the switch in the panel turns it back off.
+
+export function autoSubmitEnabled(): boolean {
+  return localStorage.getItem(AUTO_KEY) === '1';
+}
+
+export function setAutoSubmitEnabled(on: boolean): void {
+  localStorage.setItem(AUTO_KEY, on ? '1' : '0');
+}
+
+/** Remembers what was last sent, so we neither repeat nor send a worse score. */
+export function markSubmitted(score: number, at = Date.now()): void {
+  localStorage.setItem(LAST_AT_KEY, String(at));
+  localStorage.setItem(LAST_SCORE_KEY, String(Math.floor(score)));
+}
+
+export function lastSubmittedAt(): number {
+  return Number(localStorage.getItem(LAST_AT_KEY)) || 0;
+}
+
+export function lastSubmittedScore(): number {
+  return Number(localStorage.getItem(LAST_SCORE_KEY)) || 0;
+}
+
+/**
+ * Whether the background timer should send the score right now. Kept pure so
+ * the rules are testable without a browser: opted in, the player is actually
+ * looking at the game, the score has improved, and the interval has passed.
+ */
+export function shouldAutoSubmit(o: {
+  enabled: boolean;
+  visible: boolean;
+  score: number;
+  lastScore: number;
+  lastAt: number;
+  now: number;
+}): boolean {
+  if (!o.enabled || !o.visible) return false;
+  if (o.score <= o.lastScore) return false; // nothing new to say
+  return o.now - o.lastAt >= AUTO_SUBMIT_INTERVAL_MS;
 }
 
 /**

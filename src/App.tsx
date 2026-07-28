@@ -11,6 +11,7 @@ import HelpModal from './components/HelpModal';
 import Courtyard from './components/Courtyard';
 import { isMuted, setMuted } from './sound';
 import { dateFromTick, seasonKey } from './game/calendar';
+import { useAutoSubmit } from './useAutoSubmit';
 
 export default function App() {
   const game = useGame((s) => s.game);
@@ -25,6 +26,9 @@ export default function App() {
   const [muted, setMutedState] = useState(isMuted());
   const season = seasonKey(dateFromTick(game.tick));
   const bIdx = Math.min(activeBuilding, game.buildings.length - 1);
+
+  // Refresh the leaderboard entry in the background (opt-in, see useAutoSubmit).
+  useAutoSubmit();
 
   // The single 1000 ms game loop (spec §4). The store skips ticks while a
   // modal (choice / offline summary / help) is open.
