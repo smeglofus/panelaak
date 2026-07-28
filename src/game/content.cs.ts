@@ -225,6 +225,20 @@ export const CS = {
     reward: (kcs: number) => `Svazácká arkáda: z fondu káplo ${kcs} Kčs.`,
   },
 
+  leaderboard: {
+    title: '🏆 Žebříček správců',
+    yourScore: (kcs: string) => `Tvé skóre: ${kcs} (nejbohatší éra)`,
+    namePlaceholder: 'Tvoje přezdívka',
+    submit: '📤 Odeslat skóre',
+    submitting: 'Odesílám…',
+    submitted: (rank: number) => `Odesláno! Jsi na ${rank}. místě.`,
+    offline: 'Žebříček je nedostupný (běží jen s backendem).',
+    loading: 'Načítám…',
+    empty: 'Zatím žádná skóre. Buď první, soudruhu.',
+    refresh: 'Obnovit',
+    era: (n: number) => `${n}. éra`,
+  },
+
   archetypes: {
     pensioner: {
       label: 'Důchodkyně s pejskem',
