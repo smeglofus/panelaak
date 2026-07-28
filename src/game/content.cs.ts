@@ -27,6 +27,13 @@ export const CS = {
 
   ui: {
     panelHeader: 'DOMOVNÍ SPRÁVA',
+    tabs: {
+      dum: 'Dům',
+      obchod: 'Tuzex',
+      kariera: 'Kariéra',
+      zaznamy: 'Záznamy',
+      data: 'Data',
+    },
     fund: 'Domovní fond',
     reputation: 'Důvěra sousedů',
     regime: 'Kádrový profil',
@@ -200,6 +207,22 @@ export const CS = {
       'Cíl: 8 pater, plno a spokojenost aspoň 80 % = titul „Vzorný dům socialistické péče“.',
     ],
     ok: 'Rozumím, soudruzi',
+  },
+
+  arkada: {
+    title: 'Svazácká arkáda',
+    open: '🎮 Zahrát arkádu',
+    intro:
+      'Soudruh svazák tě zve na „kulturně-výchovnou“ hru: skládej papíry do řádků. Za skóre kápne pár korun z fondu.',
+    cost: (e: number) => `Sednout si stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Přijď, až si odpočineš.',
+    controls: 'Šipky: pohyb · ↑ otočit · ↓ rychleji · mezerník: shodit',
+    score: 'Skóre',
+    lines: 'Řádky',
+    start: 'Start',
+    again: 'Hrát znovu',
+    gameOver: 'Konec hry',
+    reward: (kcs: number) => `Svazácká arkáda: z fondu káplo ${kcs} Kčs.`,
   },
 
   archetypes: {
@@ -782,8 +805,11 @@ export const CS = {
   },
 
   save: {
-    export: 'Záloha savu',
-    import: 'Obnovit ze zálohy',
+    title: 'Záloha a data',
+    download: '⬇ Stáhnout zálohu (soubor)',
+    upload: '⬆ Nahrát zálohu (soubor)',
+    export: 'Zkopírovat kód zálohy',
+    import: 'Vložit kód zálohy',
     exportDone: 'Záloha zkopírována do schránky. Uložte si ji někam k rodinnému stříbru.',
     exportPrompt: 'Zkopírujte si zálohu (Ctrl+C):',
     importPrompt: 'Vložte zálohu:',

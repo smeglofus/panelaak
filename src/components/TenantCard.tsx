@@ -1,8 +1,10 @@
 // Index card shown when a flat is clicked: tenant identity, happiness, rent
 // contribution and one line of flavor (spec §6.3 acceptance).
 
+import { useState } from 'react';
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
+import ArkadaModal from './ArkadaModal';
 import { ARCHETYPES } from '../game/tenants';
 import { regimeFell } from '../game/calendar';
 import {
@@ -51,10 +53,12 @@ export default function TenantCard({ flat, onClose }: Props) {
     );
   const factors = t ? happinessFactors(game, flat) : [];
   const portrait = t ? tenantImage(t.archetype) : undefined;
+  const [arkadaOpen, setArkadaOpen] = useState(false);
   const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
   return (
+    <>
     <div className="tenant-card">
       <button type="button" className="card-close" onClick={onClose} aria-label={CS.ui.close}>
         ×
@@ -159,6 +163,15 @@ export default function TenantCard({ flat, onClose }: Props) {
               {CS.problems[flat.problem].repair} · {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
             </button>
           )}
+          {t.archetype === 'svazak' && (
+            <button
+              type="button"
+              className="btn btn-small btn-arkada"
+              onClick={() => setArkadaOpen(true)}
+            >
+              {CS.arkada.open}
+            </button>
+          )}
           {renoButton}
           {evictionRunning ? (
             <p className="eviction-pending">
@@ -191,5 +204,7 @@ export default function TenantCard({ flat, onClose }: Props) {
         </>
       )}
     </div>
+    {arkadaOpen && <ArkadaModal onClose={() => setArkadaOpen(false)} />}
+    </>
   );
 }
