@@ -25,7 +25,7 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export function createDefaultRecords(): Meta['records'] {
   return {
@@ -123,7 +123,16 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
     tuzex: { tv: false, pracka: false, digitalky: false },
     baliky: 0,
     // The svazák's arcade is part of the house; the rest is bought in Tuzex.
-    minigames: { arkada: true, potrubi: false, azor: false },
+    minigames: {
+      arkada: true,
+      potrubi: false,
+      azor: false,
+      jerab: false,
+      burza: false,
+      koncert: false,
+      filozof: false,
+    },
+    floorDiscount: 0,
     projects: { samoobsluha: false, skolka: false, kulturak: false },
     plan: null,
     nextPlanAt: PLAN_FIRST_AT,
@@ -391,6 +400,25 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
         arkada: true, // always came with the house
         potrubi: g.minigames?.potrubi ?? false,
         azor: g.minigames?.azor ?? false,
+        jerab: false,
+        burza: false,
+        koncert: false,
+        filozof: false,
+      },
+    };
+  }
+  if (fromVersion < 11) {
+    // v11 added four more diversions and the crane's banked floor discount.
+    g = {
+      ...g,
+      version: 11,
+      floorDiscount: g.floorDiscount ?? 0,
+      minigames: {
+        ...g.minigames,
+        jerab: g.minigames?.jerab ?? false,
+        burza: g.minigames?.burza ?? false,
+        koncert: g.minigames?.koncert ?? false,
+        filozof: g.minigames?.filozof ?? false,
       },
     };
   }

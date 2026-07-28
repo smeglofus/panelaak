@@ -200,6 +200,90 @@ export const EN: typeof CS = {
       name: 'Azor on patrol',
       desc: "The pensioner's game: Azor rounds up cats and dodges the Public Security.",
     },
+    jerab: {
+      name: 'Panel in place',
+      desc: "The crane operator's game: stack the panels. Precision buys a discount on the next floor.",
+    },
+    burza: {
+      name: 'Bony exchange',
+      desc: "The vekslák's game: buy low, sell high. Pays in bony — and the VB is watching.",
+    },
+    koncert: {
+      name: 'House concert',
+      desc: "The musician's game: play the tune back by ear. The whole house perks up.",
+    },
+    filozof: {
+      name: 'The walk home',
+      desc: "Pan Lojza's game: get him home from the pub. The neighbours notice.",
+    },
+  },
+
+  jerab: {
+    title: 'Panel in place',
+    intro:
+      'The crane operator lets you into the cab. "Drop the panel when it sits over the one below. Whatever hangs over gets trimmed — and you have less room for the next."',
+    controls: 'Space or click: drop the panel',
+    panels: 'Panels',
+    drop: 'Drop panel',
+    over: 'The panel missed. The foreman saw that.',
+    reward: (pct: number) => `Panels stacked. Discount on the next floor: ${pct} %.`,
+    banked: (pct: number) => `You have a ${pct} % discount waiting on the next floor.`,
+    start: 'Into the cab',
+    again: 'Once more',
+    cost: (e: number) => `A shift on the crane costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Not in that state you don\'t.',
+  },
+
+  burza: {
+    title: 'Bony exchange',
+    intro:
+      'Pan Karel spreads the rate sheet on the table. "Buy when it\'s down, sell when it\'s up. And if a patrol comes by, we were talking about football."',
+    controls: 'Buy and sell before time runs out. Hold nothing when they check.',
+    capital: 'Capital',
+    price: 'Rate',
+    holding: 'Holding goods',
+    buy: 'Buy',
+    sell: 'Sell',
+    raid: '🚨 VB patrol!',
+    raidLost: 'The patrol took the goods. A pity.',
+    timeLeft: (s: number) => `${s} s left`,
+    done: 'Trading closed.',
+    reward: (bony: number) => `The deal worked: ${bony} bony in your pocket.`,
+    noProfit: 'A loss. Pan Karel is pretending not to know you.',
+    start: 'Start trading',
+    again: 'Another round',
+    cost: (e: number) => `Trading costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Veksl needs a clear head.',
+  },
+
+  koncert: {
+    title: 'House concert',
+    intro:
+      'The maestro rests the violin on his shoulder. "I play it, you play it back. Listen properly — and let the neighbour complain."',
+    controls: 'Click the notes in the same order.',
+    round: (n: number) => `round ${n}`,
+    listen: 'Listen…',
+    repeat: 'Your turn!',
+    wrong: 'A false note. The maestro looks hurt.',
+    reward: (n: number) => `The house had a concert. Happiness +${n} for everyone.`,
+    start: 'Tune the violin',
+    again: 'Encore',
+    cost: (e: number) => `A concert costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Not in the mood for a concert.',
+  },
+
+  filozof: {
+    title: 'The walk home',
+    intro:
+      'Pan Lojza leaves the pub and heads for the block. "I can manage!" He cannot. Keep him on the pavement and steer him past the obstacles.',
+    controls: 'Left/right arrows: correct his course',
+    meters: 'Walked',
+    fell: 'Pan Lojza fell asleep on a bench. Tomorrow he will philosophise about why.',
+    reward: (rep: number) => `Pan Lojza home in one piece. Neighbours' trust +${rep}.`,
+    start: 'See him home',
+    again: 'Again',
+    cost: (e: number) => `Escorting him costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Let him find his own way.',
   },
 
   balik: {

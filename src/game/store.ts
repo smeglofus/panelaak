@@ -39,6 +39,12 @@ import {
   potrubiReward,
   AZOR_ENERGY_COST,
   azorReward,
+  jerabDiscount,
+  JERAB_MAX_DISCOUNT,
+  burzaReward,
+  koncertBonus,
+  filozofReward,
+  MINIGAME_ENERGY,
   CARETAKER_MIN_FLOORS,
   COURTYARD_COSTS,
   elevatorRepairCost,
@@ -91,6 +97,16 @@ interface PanelakStore {
   startAzor: () => boolean;
   /** Bank the money for the cats Azor rounded up. */
   rewardAzor: (cats: number) => void;
+  /** Start a diversion for elán. Returns false when too tired or paused. */
+  startMinigame: (id: MinigameId) => boolean;
+  /** Bank a crane run: panels stacked become a discount on the next floor. */
+  rewardJerab: (panels: number) => void;
+  /** Bank a burza round: profit becomes bony. */
+  rewardBurza: (finalCapital: number) => void;
+  /** Bank a concert: rounds survived lift the whole house's mood. */
+  rewardKoncert: (rounds: number) => void;
+  /** Bank Lojza's walk home: distance becomes důvěra. */
+  rewardFilozof: (meters: number) => void;
   setHelpOpen: (open: boolean) => void;
   setLanguage: (lang: Lang) => void;
   setActiveBuilding: (index: number) => void;
@@ -236,6 +252,61 @@ export const useGame = create<PanelakStore>()(
         set({ game: next });
       },
 
+      startMinigame: (id) => {
+        const { game, offlineSummary, helpOpen } = get();
+        if (offlineSummary || helpOpen || game.pendingChoice) return false;
+        const cost = MINIGAME_ENERGY[id];
+        if (game.energy < cost) return false;
+        set({ game: { ...game, energy: game.energy - cost } });
+        return true;
+      },
+
+      rewardJerab: (panels) => {
+        const { game } = get();
+        const gained = jerabDiscount(panels);
+        if (gained <= 0) return;
+        // Discounts stack between runs but never past the cap.
+        const total = Math.min(JERAB_MAX_DISCOUNT, game.floorDiscount + gained);
+        const next = addLog(
+          { ...game, floorDiscount: total },
+          'good',
+          CS.jerab.reward(Math.round(total * 100)),
+        );
+        set({ game: next });
+      },
+
+      rewardBurza: (finalCapital) => {
+        const { game } = get();
+        const bony = burzaReward(finalCapital);
+        if (bony <= 0) return;
+        const next = addLog({ ...game, bony: game.bony + bony }, 'good', CS.burza.reward(bony));
+        set({ game: next });
+      },
+
+      rewardKoncert: (rounds) => {
+        const { game } = get();
+        const bonus = koncertBonus(rounds);
+        if (bonus <= 0) return;
+        let next = mapTenants(game, (t) => ({
+          ...t,
+          happiness: clamp(t.happiness + bonus, 0, 100),
+        }));
+        next = addLog(next, 'good', CS.koncert.reward(bonus));
+        set({ game: next });
+      },
+
+      rewardFilozof: (meters) => {
+        const { game } = get();
+        const rep = filozofReward(meters);
+        if (rep <= 0) return;
+        const next = addLog(
+          { ...game, reputation: clamp(game.reputation + rep, 0, 100) },
+          'good',
+          CS.filozof.reward(rep),
+        );
+        set({ game: next });
+      },
+
       setHelpOpen: (open) => set({ helpOpen: open }),
 
       setLanguage: (lang) => {
@@ -257,7 +328,9 @@ export const useGame = create<PanelakStore>()(
         const { game } = get();
         const b = game.buildings[bIdx];
         if (!b || b.floors >= MAX_FLOORS) return;
-        const cost = floorCost(b.floors, game.meta.perks.beton);
+        const listPrice = floorCost(b.floors, game.meta.perks.beton);
+        // Panels stacked in the crane game come off the price, once.
+        const cost = Math.round(listPrice * (1 - (game.floorDiscount ?? 0)));
         if (game.money < cost) return;
 
         const newFloor = b.floors + 1;
@@ -271,7 +344,12 @@ export const useGame = create<PanelakStore>()(
         const buildings = game.buildings.map((bb, i) =>
           i === bIdx ? { ...bb, floors: newFloor, flats } : bb,
         );
-        let next: GameState = { ...game, money: game.money - cost, buildings };
+        let next: GameState = {
+          ...game,
+          money: game.money - cost,
+          buildings,
+          floorDiscount: 0, // spent
+        };
         next = addLog(next, 'good', CS.toasts.floorBought(newFloor));
         set({ game: next });
       },

@@ -68,7 +68,14 @@ export type TuzexId = 'tv' | 'pracka' | 'digitalky';
  * two are bought in Tuzex, which is what finally gives late-game bony somewhere
  * to go.
  */
-export type MinigameId = 'arkada' | 'potrubi' | 'azor';
+export type MinigameId =
+  | 'arkada'
+  | 'potrubi'
+  | 'azor'
+  | 'jerab'
+  | 'burza'
+  | 'koncert'
+  | 'filozof';
 
 export type ProblemId = 'leak' | 'window' | 'radiator';
 
@@ -233,6 +240,11 @@ export interface GameState {
   baliky: number;
   /** Which tenant-card diversions have been unlocked. */
   minigames: Record<MinigameId, boolean>;
+  /**
+   * Discount on the next floor, banked by stacking panels in the crane game.
+   * A fraction (0–0.5); spent and reset the moment a floor is bought.
+   */
+  floorDiscount: number;
   /** Sídliště mega-projects built this era. */
   projects: Record<ProjectId, boolean>;
   /** The current pětiletka assignment, if any. */
