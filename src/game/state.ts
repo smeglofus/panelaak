@@ -9,6 +9,7 @@ import type {
   Meta,
   Tenant,
 } from './types';
+import { compressToBase64, decompressFromBase64 } from 'lz-string';
 import { createRng } from './rng';
 import { createTenant } from './tenants';
 import {
@@ -381,15 +382,31 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
 
 // --- Save export/import ---------------------------------------------------------
 
-/** Base64-encoded JSON — unicode-safe, mildly tamper-discouraging. */
+/** Marks a compressed backup. Old backups are raw base64 and lack the prefix. */
+const SAVE_PREFIX = 'PT1:';
+
+/** LZ-compressed base64 JSON — unicode-safe, compact, mildly tamper-discouraging. */
 export function encodeSave(game: GameState): string {
-  return btoa(unescape(encodeURIComponent(JSON.stringify({ v: game.version, game }))));
+  // The kronika is presentation history, not needed to restore state — and it's
+  // the bulk of the blob. Drop it, then LZ-compress the rest (≈5–10× smaller).
+  const rest: Partial<GameState> = { ...game };
+  delete rest.log;
+  const json = JSON.stringify({ v: game.version, game: rest });
+  return SAVE_PREFIX + compressToBase64(json);
 }
 
 /** Returns the migrated game state, or null when the blob is unreadable. */
 export function decodeSave(raw: string): GameState | null {
   try {
-    const json = decodeURIComponent(escape(atob(raw.trim())));
+    const trimmed = raw.trim();
+    let json: string;
+    if (trimmed.startsWith(SAVE_PREFIX)) {
+      json = decompressFromBase64(trimmed.slice(SAVE_PREFIX.length)) ?? '';
+    } else {
+      // Backward compatibility: uncompressed base64 backups from older builds.
+      json = decodeURIComponent(escape(atob(trimmed)));
+    }
+    if (!json) return null;
     const parsed = JSON.parse(json) as { v?: number; game?: GameState };
     const game = parsed.game;
     if (!game || !Array.isArray(game.buildings) || typeof game.money !== 'number') {
@@ -397,7 +414,8 @@ export function decodeSave(raw: string): GameState | null {
     }
     const version = parsed.v ?? game.version ?? 1;
     if (version > SAVE_VERSION) return null; // from a newer build — refuse politely
-    return migrateSave(game, version);
+    const restored = migrateSave(game, version);
+    return { ...restored, log: restored.log ?? [] }; // log is stripped from backups
   } catch {
     return null;
   }

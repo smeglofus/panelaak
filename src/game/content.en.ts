@@ -11,6 +11,13 @@ export const EN: typeof CS = {
 
   ui: {
     panelHeader: 'HOUSE ADMINISTRATION',
+    tabs: {
+      dum: 'House',
+      obchod: 'Tuzex',
+      kariera: 'Career',
+      zaznamy: 'Records',
+      data: 'Data',
+    },
     fund: 'House fund',
     reputation: 'Neighbours’ trust',
     regime: 'Cadre profile',
@@ -178,6 +185,22 @@ export const EN: typeof CS = {
       'The goal: 8 floors, full house, 80 % happiness = the title “Model House of Socialist Care”.',
     ],
     ok: 'Understood, comrades',
+  },
+
+  arkada: {
+    title: 'Union arcade',
+    open: '🎮 Play the arcade',
+    intro:
+      'The union comrade invites you to a “culturally edifying” game: stack the paperwork into rows. A good score pays a little from the fund.',
+    cost: (e: number) => `Sitting down costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Come back once you have rested.',
+    controls: 'Arrows: move · ↑ rotate · ↓ faster · space: drop',
+    score: 'Score',
+    lines: 'Lines',
+    start: 'Start',
+    again: 'Play again',
+    gameOver: 'Game over',
+    reward: (kcs: number) => `Union arcade: the fund paid out ${kcs} Kčs.`,
   },
 
   archetypes: {
@@ -759,8 +782,11 @@ export const EN: typeof CS = {
   },
 
   save: {
-    export: 'Back up save',
-    import: 'Restore from backup',
+    title: 'Backup & data',
+    download: '⬇ Download backup (file)',
+    upload: '⬆ Upload backup (file)',
+    export: 'Copy backup code',
+    import: 'Paste backup code',
     exportDone: 'Backup copied to clipboard. Store it with the family silver.',
     exportPrompt: 'Copy your backup (Ctrl+C):',
     importPrompt: 'Paste your backup:',

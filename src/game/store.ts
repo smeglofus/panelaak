@@ -33,6 +33,8 @@ import {
   updateFlat,
 } from './state';
 import {
+  ARKADA_ENERGY_COST,
+  arkadaReward,
   CARETAKER_MIN_FLOORS,
   COURTYARD_COSTS,
   elevatorRepairCost,
@@ -69,6 +71,10 @@ interface PanelakStore {
 
   tickOnce: () => void;
   workBrigade: () => void;
+  /** Pay elán to start the svazák arkáda. Returns false if too tired / paused. */
+  startArkada: () => boolean;
+  /** Bank the money earned in one finished arkáda game. */
+  rewardArkada: (score: number) => void;
   setHelpOpen: (open: boolean) => void;
   setLanguage: (lang: Lang) => void;
   setActiveBuilding: (index: number) => void;
@@ -132,6 +138,26 @@ export const useGame = create<PanelakStore>()(
         const { game, offlineSummary, helpOpen } = get();
         if (offlineSummary || helpOpen || game.pendingChoice) return;
         set({ game: applyBrigadeWork(game) });
+      },
+
+      startArkada: () => {
+        const { game, offlineSummary, helpOpen } = get();
+        if (offlineSummary || helpOpen || game.pendingChoice) return false;
+        if (game.energy < ARKADA_ENERGY_COST) return false;
+        set({ game: { ...game, energy: game.energy - ARKADA_ENERGY_COST } });
+        return true;
+      },
+
+      rewardArkada: (score) => {
+        const { game } = get();
+        const reward = arkadaReward(score);
+        if (reward <= 0) return;
+        const next = addLog(
+          { ...game, money: game.money + reward, totalEarned: game.totalEarned + reward },
+          'good',
+          CS.arkada.reward(reward),
+        );
+        set({ game: next });
       },
 
       setHelpOpen: (open) => set({ helpOpen: open }),

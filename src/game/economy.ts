@@ -201,6 +201,21 @@ export function brigadeReward(floors: number, naradiLevel = 0, rucickyLevel = 0)
   return 3 + floors + NARADI_REWARD_BONUS * naradiLevel + RUCICKY_BONUS * rucickyLevel;
 }
 
+// --- Svazákova arkáda (byrokratický tetris) ----------------------------------
+// Minihra u svazáka: uklízíš papíry do řádků jako správný funkcionář. Stojí
+// elán (jako brigáda), za skóre kápne pár korun z „fondu kulturního vyžití".
+
+/** Elán spent to sit down for one game. */
+export const ARKADA_ENERGY_COST = 30;
+/** Kčs paid per point of score. */
+export const ARKADA_MONEY_PER_POINT = 0.1;
+/** The výbor never pays more than this for one game, however good you are. */
+export const ARKADA_MAX_REWARD = 400;
+
+export function arkadaReward(score: number): number {
+  return Math.min(ARKADA_MAX_REWARD, Math.round(score * ARKADA_MONEY_PER_POINT));
+}
+
 // --- Repeatable upgrades (the endless money sink) ------------------------------
 
 export const RENOVACE_RENT_BONUS = 0.05;
