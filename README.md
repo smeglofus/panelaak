@@ -157,7 +157,24 @@ VITE_API_BASE=https://api.example.com npm run build
 Both are cross-origin, which the backend allows by default. Narrow it with the
 `CORS_ORIGIN` env var (comma-separated allowlist) if you'd rather not run open.
 
-For a real deployment behind Traefik:
+### Live deployment (Cloudflare Tunnel)
+
+The public instance runs at **https://panelaak.shelfy.cz** from a host with no
+public IP: `docker compose up -d` binds the stack to `127.0.0.1:8080` and a
+Cloudflare Tunnel publishes it. The tunnel's ingress (`/etc/cloudflared/config.yml`)
+just needs one more hostname rule alongside the existing ones —
+
+```yaml
+  - hostname: panelaak.shelfy.cz
+    service: http://127.0.0.1:8080
+```
+
+— plus `cloudflared tunnel route dns <tunnel-id> panelaak.shelfy.cz` to create
+the CNAME, then `systemctl restart cloudflared`. One hostname covers both the
+game and the leaderboard, because nginx proxies `/api` internally: same origin,
+no CORS, and the certificate is Cloudflare's.
+
+### Behind Traefik instead
 
 ```bash
 echo "DOMAIN=panelaak.shelfy.cz" >> .env
