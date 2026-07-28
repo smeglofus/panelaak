@@ -1796,6 +1796,60 @@ button {
   background: #6d5a8a;
 }
 
+/* --- Leaderboard ----------------------------------------------------------- */
+
+.lb-name {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 7px 9px;
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--paper);
+  border: 1px solid #b9ad8e;
+  color: inherit;
+}
+
+.leaderboard {
+  list-style: none;
+  margin: 10px 0 6px;
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leaderboard li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px dotted var(--paper-line);
+}
+
+.lb-rank {
+  min-width: 22px;
+  color: #7c7666;
+  font-weight: 700;
+}
+
+.lb-name-cell {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-score {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lb-era {
+  font-weight: 400;
+  color: #7c7666;
+}
+
 .offline-flavor {
   font-style: italic;
   color: #6e685a;

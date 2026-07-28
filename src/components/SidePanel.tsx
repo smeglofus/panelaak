@@ -14,6 +14,7 @@ import { SECONDS_PER_DAY } from '../game/calendar';
 import { play } from '../sound';
 import { encodeSave } from '../game/state';
 import { downloadSave, readSaveFile } from '../saveFile';
+import LeaderboardPanel from './LeaderboardPanel';
 import {
   BRIGADE_ENERGY_COST,
   brigadeReward,
@@ -304,6 +305,7 @@ export default function SidePanel() {
   // --- Tab: Kariéra (privatizace, posudek, síň slávy) -----------------------
   const karieraTab = (
     <>
+      <LeaderboardPanel />
       <section className="panel-section panel-prestige">
         <h3>
           {CS.prestige.title}

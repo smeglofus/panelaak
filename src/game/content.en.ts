@@ -203,6 +203,20 @@ export const EN: typeof CS = {
     reward: (kcs: number) => `Union arcade: the fund paid out ${kcs} Kčs.`,
   },
 
+  leaderboard: {
+    title: '🏆 Administrators leaderboard',
+    yourScore: (kcs: string) => `Your score: ${kcs} (richest era)`,
+    namePlaceholder: 'Your nickname',
+    submit: '📤 Submit score',
+    submitting: 'Submitting…',
+    submitted: (rank: number) => `Submitted! You are ranked #${rank}.`,
+    offline: 'Leaderboard unavailable (needs the backend).',
+    loading: 'Loading…',
+    empty: 'No scores yet. Be the first, comrade.',
+    refresh: 'Refresh',
+    era: (n: number) => `era ${n}`,
+  },
+
   archetypes: {
     pensioner: {
       label: 'Pensioner with a dog',

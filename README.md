@@ -130,6 +130,16 @@ base + ~200 kB of assets):
 docker compose up --build    # → http://localhost:8080
 ```
 
+`docker compose up` also starts the **leaderboard API** ([server/](server/) —
+Fastify + SQLite): nginx proxies `/api/` to it, scores live in a persistent
+volume. The game works fine without it (the leaderboard section just shows
+"unavailable"), so the static-only GitHub Pages build is unaffected. For local
+dev run the backend alongside Vite:
+
+```bash
+cd server && npm install && npm run dev   # :3001, Vite proxies /api to it
+```
+
 For a real deployment behind Traefik: set your domain in the
 `traefik.http.routers.panelak.rule` label in
 [docker-compose.yml](docker-compose.yml), uncomment the external `web` network
