@@ -5,6 +5,8 @@ import { useState } from 'react';
 import type { Flat } from '../game/types';
 import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import ArkadaModal from './ArkadaModal';
+import PotrubiModal from './PotrubiModal';
+import AzorModal from './AzorModal';
 import { ARCHETYPES } from '../game/tenants';
 import { regimeFell } from '../game/calendar';
 import {
@@ -54,6 +56,8 @@ export default function TenantCard({ flat, onClose }: Props) {
   const factors = t ? happinessFactors(game, flat) : [];
   const portrait = t ? tenantImage(t.archetype) : undefined;
   const [arkadaOpen, setArkadaOpen] = useState(false);
+  const [potrubiOpen, setPotrubiOpen] = useState(false);
+  const [azorOpen, setAzorOpen] = useState(false);
   const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
@@ -163,13 +167,31 @@ export default function TenantCard({ flat, onClose }: Props) {
               {CS.problems[flat.problem].repair} · {formatKcs(PROBLEM_DEFS[flat.problem].repairCost)}
             </button>
           )}
-          {t.archetype === 'svazak' && (
+          {t.archetype === 'svazak' && game.minigames.arkada && (
             <button
               type="button"
               className="btn btn-small btn-arkada"
               onClick={() => setArkadaOpen(true)}
             >
               {CS.arkada.open}
+            </button>
+          )}
+          {t.archetype === 'kutil' && game.minigames.potrubi && (
+            <button
+              type="button"
+              className="btn btn-small btn-arkada"
+              onClick={() => setPotrubiOpen(true)}
+            >
+              🔧 {CS.potrubi.title}
+            </button>
+          )}
+          {t.archetype === 'pensioner' && game.minigames.azor && (
+            <button
+              type="button"
+              className="btn btn-small btn-arkada"
+              onClick={() => setAzorOpen(true)}
+            >
+              🐕 {CS.azor.title}
             </button>
           )}
           {renoButton}
@@ -205,6 +227,8 @@ export default function TenantCard({ flat, onClose }: Props) {
       )}
     </div>
     {arkadaOpen && <ArkadaModal onClose={() => setArkadaOpen(false)} />}
+    {potrubiOpen && <PotrubiModal onClose={() => setPotrubiOpen(false)} />}
+    {azorOpen && <AzorModal onClose={() => setAzorOpen(false)} />}
     </>
   );
 }

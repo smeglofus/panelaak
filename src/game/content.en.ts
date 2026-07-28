@@ -187,6 +187,63 @@ export const EN: typeof CS = {
     ok: 'Understood, comrades',
   },
 
+  minigames: {
+    arkada: {
+      name: 'Union arcade',
+      desc: "The svazák's game. Comes with the house, not for sale.",
+    },
+    potrubi: {
+      name: "Handyman's pipes",
+      desc: "The kutil's game: connect the pipes. A win fixes a burst pipe in the house.",
+    },
+    azor: {
+      name: 'Azor on patrol',
+      desc: "The pensioner's game: Azor rounds up cats and dodges the Public Security.",
+    },
+  },
+
+  balik: {
+    name: 'Tuzex hamper',
+    desc: 'Coffee, chocolate, stockings. The house lives better — a permanent +4 % rent.',
+    level: (n: number) => `hamper ${n}`,
+  },
+
+  smenarna: {
+    name: 'Exchange desk at the committee',
+    desc: (bony: number) => `${bony} bony for one privatization kupón. The rate is outrageous.`,
+    locked: 'Kupóny only matter from privatization (1990).',
+  },
+
+  potrubi: {
+    title: "Handyman's pipes",
+    intro:
+      'The kutil spreads the riser plan on the table. "Turn the pipes so it runs from the meter to the flat. Manage that and I\'ll take a look at that crack of yours."',
+    controls: 'Click a pipe — it turns 90°.',
+    moves: 'Turns',
+    connected: 'It flows!',
+    win: (kcs: number) => `Connected. The kutil took ${kcs} Kčs for materials and got to work.`,
+    winFixed: (flat: string) => `And fixed the burst pipe straight away — ${flat}.`,
+    start: 'Spread the plan',
+    again: 'New plan',
+    cost: (e: number) => `Sitting down to it costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. The kutil will wait.',
+  },
+
+  azor: {
+    title: 'Azor on patrol',
+    intro:
+      'Paní Vlasta lets Azor out into the courtyard. "Let him run. But mind the Public Security lot, they have no love for dogs."',
+    controls: 'Arrows: run · collect every cat · do not get caught',
+    cats: 'Cats',
+    caught: 'Caught!',
+    win: 'Courtyard inspected. Azor is content.',
+    win2: (kcs: number) => `Paní Vlasta chipped in ${kcs} Kčs.`,
+    start: 'Let Azor out',
+    again: 'Once more',
+    cost: (e: number) => `A walk costs ${e} zeal.`,
+    tooTired: 'Not enough zeal. Azor will lie down for now.',
+  },
+
   arkada: {
     title: 'Union arcade',
     open: '🎮 Play the arcade',
@@ -343,6 +400,10 @@ export const EN: typeof CS = {
       `${name} — level ${level}. The house keeps getting better.`,
     kulturakBon:
       'A bon dripped out of the House of Culture. The ticket money got lost on the way to the till.',
+    balikBought: (n: number) =>
+      `Tuzex hamper ${n} arrived. The house is getting used to better things; the rent can take it.`,
+    kuponExchanged: 'Bony exchanged for a kupón. The rate was outrageous, but paper is paper.',
+    minigameUnlocked: (name: string) => `${name} — sourced through Tuzex. The neighbours will stare.`,
     kavaServed:
       'Tuzex coffee and chocolate made the rounds. The whole house feels classy.',
   },

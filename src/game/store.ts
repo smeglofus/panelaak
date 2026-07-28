@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CourtyardId, GameState, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from './types';
+import type { CourtyardId, GameState, MinigameId, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from './types';
 import { tick } from './tick';
 import { resolveChoice } from './events';
 import { coverTenant, reportTenant, spyOnTenant } from './secrets';
@@ -35,6 +35,10 @@ import {
 import {
   ARKADA_ENERGY_COST,
   arkadaReward,
+  POTRUBI_ENERGY_COST,
+  potrubiReward,
+  AZOR_ENERGY_COST,
+  azorReward,
   CARETAKER_MIN_FLOORS,
   COURTYARD_COSTS,
   elevatorRepairCost,
@@ -44,6 +48,9 @@ import {
   floorCost,
   KAVA_COST_BONY,
   KAVA_HAPPINESS_BONUS,
+  tuzexBalikCost,
+  BONY_PER_KUPON,
+  MINIGAME_COSTS,
   FLAT_RENO_MAX,
   flatRenoCost,
   MAX_FLOORS,
@@ -76,6 +83,14 @@ interface PanelakStore {
   startArkada: () => boolean;
   /** Bank the money earned in one finished arkáda game. */
   rewardArkada: (score: number) => void;
+  /** Pay elán to start the kutil's pipe puzzle. */
+  startPotrubi: () => boolean;
+  /** Pay out a solved pipe puzzle; also fixes one real leak. Returns its flat. */
+  rewardPotrubi: (moves: number) => string | null;
+  /** Pay elán to let Azor out. */
+  startAzor: () => boolean;
+  /** Bank the money for the cats Azor rounded up. */
+  rewardAzor: (cats: number) => void;
   setHelpOpen: (open: boolean) => void;
   setLanguage: (lang: Lang) => void;
   setActiveBuilding: (index: number) => void;
@@ -93,6 +108,12 @@ interface PanelakStore {
   reportFlat: (flatIndex: number) => void;
   buyTuzex: (id: TuzexId) => void;
   buyKava: () => void;
+  /** Repeatable Tuzex hamper — the endless bony sink. */
+  buyBalik: () => void;
+  /** Trade a pile of bony for one privatizační kupón, at a bad rate. */
+  exchangeBonyForKupon: () => void;
+  /** Unlock a tenant-card diversion for bony. */
+  unlockMinigame: (id: MinigameId) => void;
   buyRepeatable: (id: RepeatableId) => void;
   renovateFlat: (flatIndex: number) => void;
   buyProject: (id: ProjectId) => void;
@@ -166,6 +187,51 @@ export const useGame = create<PanelakStore>()(
           { ...game, money: game.money + reward, totalEarned: game.totalEarned + reward },
           'good',
           CS.arkada.reward(reward),
+        );
+        set({ game: next });
+      },
+
+      startPotrubi: () => {
+        const { game, offlineSummary, helpOpen } = get();
+        if (offlineSummary || helpOpen || game.pendingChoice) return false;
+        if (game.energy < POTRUBI_ENERGY_COST) return false;
+        set({ game: { ...game, energy: game.energy - POTRUBI_ENERGY_COST } });
+        return true;
+      },
+
+      rewardPotrubi: (moves) => {
+        const { game } = get();
+        const reward = potrubiReward(moves);
+        // The kutil looks at a real leak on his way out — that's the joke, and
+        // it makes the puzzle worth playing when the house is actually broken.
+        const leak = allFlats(game).find((f) => f.problem === 'leak');
+        let next: GameState = {
+          ...game,
+          money: game.money + reward,
+          totalEarned: game.totalEarned + reward,
+        };
+        if (leak) next = updateFlat(next, leak.index, (f) => ({ ...f, problem: null }));
+        next = addLog(next, 'good', CS.potrubi.win(reward));
+        set({ game: next });
+        return leak ? CS.ui.flatLabel(leak.index + 1) : null;
+      },
+
+      startAzor: () => {
+        const { game, offlineSummary, helpOpen } = get();
+        if (offlineSummary || helpOpen || game.pendingChoice) return false;
+        if (game.energy < AZOR_ENERGY_COST) return false;
+        set({ game: { ...game, energy: game.energy - AZOR_ENERGY_COST } });
+        return true;
+      },
+
+      rewardAzor: (cats) => {
+        const { game } = get();
+        const reward = azorReward(cats);
+        if (reward <= 0) return;
+        const next = addLog(
+          { ...game, money: game.money + reward, totalEarned: game.totalEarned + reward },
+          'good',
+          CS.azor.win2(reward),
         );
         set({ game: next });
       },
@@ -368,6 +434,50 @@ export const useGame = create<PanelakStore>()(
           happiness: clamp(t.happiness + KAVA_HAPPINESS_BONUS, 0, 100),
         }));
         next = addLog(next, 'good', CS.toasts.kavaServed);
+        set({ game: next });
+      },
+
+      buyBalik: () => {
+        const { game } = get();
+        const cost = tuzexBalikCost(game.baliky);
+        if (game.bony < cost) return;
+        const level = game.baliky + 1;
+        const next = addLog(
+          { ...game, bony: game.bony - cost, baliky: level },
+          'good',
+          CS.toasts.balikBought(level),
+        );
+        set({ game: next });
+      },
+
+      exchangeBonyForKupon: () => {
+        const { game } = get();
+        if (game.bony < BONY_PER_KUPON) return;
+        const next = addLog(
+          {
+            ...game,
+            bony: game.bony - BONY_PER_KUPON,
+            meta: { ...game.meta, kupony: game.meta.kupony + 1 },
+          },
+          'good',
+          CS.toasts.kuponExchanged,
+        );
+        set({ game: next });
+      },
+
+      unlockMinigame: (id) => {
+        const { game } = get();
+        const cost = MINIGAME_COSTS[id];
+        if (game.minigames[id] || game.bony < cost) return;
+        const next = addLog(
+          {
+            ...game,
+            bony: game.bony - cost,
+            minigames: { ...game.minigames, [id]: true },
+          },
+          'milestone',
+          CS.toasts.minigameUnlocked(CS.minigames[id].name),
+        );
         set({ game: next });
       },
 

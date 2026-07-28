@@ -3,7 +3,7 @@
 // so the panel stops being one endless scroll.
 
 import { useRef, useState, type ReactNode } from 'react';
-import type { BadgeId, CourtyardId, MilestoneId, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
+import type { BadgeId, CourtyardId, MilestoneId, MinigameId, PerkId, ProjectId, RepeatableId, TuzexId, UpgradeId } from '../game/types';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { allFlats, avgHappiness, occupiedCount, totalFloors } from '../game/state';
@@ -28,6 +28,9 @@ import {
   HEATING_COST_PER_FLOOR,
   incomePerSec,
   KAVA_COST_BONY,
+  tuzexBalikCost,
+  BONY_PER_KUPON,
+  MINIGAME_COSTS,
   buildingCap,
   plotCost,
   SITES,
@@ -54,6 +57,9 @@ export default function SidePanel() {
   const buyCourtyard = useGame((s) => s.buyCourtyard);
   const buyTuzex = useGame((s) => s.buyTuzex);
   const buyKava = useGame((s) => s.buyKava);
+  const buyBalik = useGame((s) => s.buyBalik);
+  const exchangeBonyForKupon = useGame((s) => s.exchangeBonyForKupon);
+  const unlockMinigame = useGame((s) => s.unlockMinigame);
   const buyRepeatable = useGame((s) => s.buyRepeatable);
   const buyPrestigePerk = useGame((s) => s.buyPrestigePerk);
   const privatize = useGame((s) => s.privatize);
@@ -314,6 +320,71 @@ export default function SidePanel() {
           ★ {KAVA_COST_BONY}
         </button>
       </div>
+
+      {/* The endless sink: every hamper costs more and pays rent forever. */}
+      <div className="upgrade">
+        <div className="upgrade-text">
+          <strong>
+            {CS.balik.name}
+            {game.baliky > 0 && (
+              <span className="level-badge"> {CS.prestige.level(game.baliky)}</span>
+            )}
+          </strong>
+          <span>{CS.balik.desc}</span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-bony"
+          disabled={game.bony < tuzexBalikCost(game.baliky)}
+          onClick={buyBalik}
+        >
+          ★ {tuzexBalikCost(game.baliky)}
+        </button>
+      </div>
+
+      {/* Unlockable diversions — bony buying content, not just percentages. */}
+      {(['potrubi', 'azor'] as MinigameId[]).map((id) => {
+        const owned = game.minigames[id];
+        return (
+          <div key={id} className={`upgrade${owned ? ' upgrade-owned' : ''}`}>
+            <div className="upgrade-text">
+              <strong>🎮 {CS.minigames[id].name}</strong>
+              <span>{CS.minigames[id].desc}</span>
+            </div>
+            {owned ? (
+              <span className="owned-mark">{CS.ui.owned}</span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-bony"
+                disabled={game.bony < MINIGAME_COSTS[id]}
+                onClick={() => unlockMinigame(id)}
+              >
+                ★ {MINIGAME_COSTS[id]}
+              </button>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Late game: bony are never quite worthless, just badly priced. */}
+      <div className="upgrade">
+        <div className="upgrade-text">
+          <strong>{CS.smenarna.name}</strong>
+          <span>
+            {privatizaceRumoured(game) ? CS.smenarna.desc(BONY_PER_KUPON) : CS.smenarna.locked}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-bony"
+          disabled={!privatizaceRumoured(game) || game.bony < BONY_PER_KUPON}
+          onClick={exchangeBonyForKupon}
+        >
+          ✂️ 1
+        </button>
+      </div>
+
       <p className="brigade-hint">{CS.ui.tuzexHint}</p>
     </section>
   );

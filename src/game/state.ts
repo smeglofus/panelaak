@@ -25,7 +25,7 @@ import {
   TENANT_STARTING_HAPPINESS,
 } from './economy';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export function createDefaultRecords(): Meta['records'] {
   return {
@@ -121,6 +121,9 @@ export function createInitialState(seed?: number, meta?: Meta): GameState {
     caretakerHired: false,
     bony: 0,
     tuzex: { tv: false, pracka: false, digitalky: false },
+    baliky: 0,
+    // The svazák's arcade is part of the house; the rest is bought in Tuzex.
+    minigames: { arkada: true, potrubi: false, azor: false },
     projects: { samoobsluha: false, skolka: false, kulturak: false },
     plan: null,
     nextPlanAt: PLAN_FIRST_AT,
@@ -375,6 +378,20 @@ export function migrateSave(game: GameState, fromVersion: number): GameState {
             : f,
         ),
       })),
+    };
+  }
+  if (fromVersion < 10) {
+    // v10 gave bony something to buy: repeatable hampers and unlockable
+    // diversions. Existing saves keep the arcade they already had.
+    g = {
+      ...g,
+      version: 10,
+      baliky: g.baliky ?? 0,
+      minigames: {
+        arkada: true, // always came with the house
+        potrubi: g.minigames?.potrubi ?? false,
+        azor: g.minigames?.azor ?? false,
+      },
     };
   }
   return g;

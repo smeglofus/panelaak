@@ -209,6 +209,63 @@ export const CS = {
     ok: 'Rozumím, soudruzi',
   },
 
+  minigames: {
+    arkada: {
+      name: 'Svazácká arkáda',
+      desc: 'Hra u svazáka. Patří k domu, nekupuje se.',
+    },
+    potrubi: {
+      name: 'Kutilovo potrubí',
+      desc: 'Hra u kutila: spoj trubky, ať to teče. Výhra opraví prasklou trubku v domě.',
+    },
+    azor: {
+      name: 'Azor na obchůzce',
+      desc: 'Hra u důchodkyně: Azor sbírá kočky a utíká před Veřejnou bezpečností.',
+    },
+  },
+
+  balik: {
+    name: 'Balík z Tuzexu',
+    desc: 'Káva, čokoláda, punčochy. Dům si žije líp — trvale +4 % nájemného.',
+    level: (n: number) => `${n}. balík`,
+  },
+
+  smenarna: {
+    name: 'Směnárna u výboru',
+    desc: (bony: number) => `Za ${bony} bonů jeden privatizační kupón. Kurz je nehorázný.`,
+    locked: 'Kupóny mají cenu až od privatizace (1990).',
+  },
+
+  potrubi: {
+    title: 'Kutilovo potrubí',
+    intro:
+      'Pan kutil rozložil na stole plán stoupačky. „Otoč trubky tak, aby to teklo od vodoměru do bytu. Když to zvládneš, mrknu se ti na tu prasklinu.“',
+    controls: 'Klikni na trubku — otočí se o 90°.',
+    moves: 'Otočení',
+    connected: 'Teče!',
+    win: (kcs: number) => `Spojeno. Kutil dostal ${kcs} Kčs na materiál a šel opravovat.`,
+    winFixed: (flat: string) => `A rovnou spravil prasklou trubku — ${flat}.`,
+    start: 'Rozložit plán',
+    again: 'Nový plán',
+    cost: (e: number) => `Sednout si k tomu stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Kutil počká.',
+  },
+
+  azor: {
+    title: 'Azor na obchůzce',
+    intro:
+      'Paní Vlasta pustila Azora na dvorek. „Jen ať se proběhne. Ale pozor na ty od Veřejné bezpečnosti, ti nemají psy rádi.“',
+    controls: 'Šipky: běhej · seber všechny kočky · nenech se chytit',
+    cats: 'Kočky',
+    caught: 'Chycen!',
+    win: 'Dvorek přebrán. Azor je spokojený.',
+    win2: (kcs: number) => `Paní Vlasta dala na přilepšenou ${kcs} Kčs.`,
+    start: 'Pustit Azora',
+    again: 'Ještě jednou',
+    cost: (e: number) => `Venčení stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Azor si zatím lehne.',
+  },
+
   arkada: {
     title: 'Svazácká arkáda',
     open: '🎮 Zahrát arkádu',
@@ -367,6 +424,10 @@ export const CS = {
       'Z Kulturního domu ukápl bon. Vstupné se cestou do pokladny někde ztratilo.',
     kavaServed:
       'Káva a čokoláda z Tuzexu kolovaly po domě. Celý dům si připadá na úrovni.',
+    balikBought: (n: number) =>
+      `Přišel ${n}. balík z Tuzexu. Dům si zvyká na lepší, nájem to unese.`,
+    kuponExchanged: 'Bony směněny za kupón. Kurz byl nehorázný, ale papír je papír.',
+    minigameUnlocked: (name: string) => `${name} — sehnáno přes Tuzex. Sousedi budou koukat.`,
   },
 
   events: {

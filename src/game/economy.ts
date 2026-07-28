@@ -8,6 +8,7 @@ import type {
   Flat,
   GameState,
   MilestoneId,
+  MinigameId,
   PerkId,
   ProblemId,
   ProjectId,
@@ -123,6 +124,7 @@ export function incomePerSec(state: GameState): number {
   let mult = state.upgrades.cellar ? CELLAR_RENT_MULT : 1;
   mult *= 1 + RENOVACE_RENT_BONUS * state.repeatables.renovace;
   mult *= 1 + PRESTIGE_RENT_BONUS * state.meta.prestigeLevel;
+  mult *= 1 + TUZEX_BALIK_RENT_BONUS * (state.baliky ?? 0);
   let sum = 0;
   for (const building of state.buildings) {
     for (const flat of building.flats) {
@@ -242,6 +244,28 @@ export const ARKADA_MAX_REWARD = 400;
 
 export function arkadaReward(score: number): number {
   return Math.min(ARKADA_MAX_REWARD, Math.round(score * ARKADA_MONEY_PER_POINT));
+}
+
+// --- Kutilovo potrubí ----------------------------------------------------------
+
+export const POTRUBI_ENERGY_COST = 20;
+/** Solving it in few turns pays better; a fumbled solve still covers the trip. */
+export const POTRUBI_BASE_REWARD = 300;
+export const POTRUBI_MIN_REWARD = 60;
+export const POTRUBI_PER_MOVE_PENALTY = 8;
+
+export function potrubiReward(moves: number): number {
+  return Math.max(POTRUBI_MIN_REWARD, POTRUBI_BASE_REWARD - POTRUBI_PER_MOVE_PENALTY * moves);
+}
+
+// --- Azor na obchůzce ----------------------------------------------------------
+
+export const AZOR_ENERGY_COST = 25;
+/** Paid per cat rounded up in the courtyard. */
+export const AZOR_MONEY_PER_CAT = 45;
+
+export function azorReward(cats: number): number {
+  return AZOR_MONEY_PER_CAT * cats;
 }
 
 // --- Repeatable upgrades (the endless money sink) ------------------------------
@@ -468,6 +492,35 @@ export const TUZEX_COSTS: Record<TuzexId, number> = {
 };
 
 export const KAVA_COST_BONY = 2;
+
+// --- The bony sink ------------------------------------------------------------
+// Three one-off goods (12 bony in total) used to be everything bony were for,
+// while a mid-game house earns roughly forty an hour. These three sinks give
+// them somewhere to go for good: a hamper that never stops costing more, a
+// terrible exchange rate into kupóny, and the minigame unlocks below.
+
+/** Repeatable Tuzex hamper: permanent rent bonus per level. */
+export const TUZEX_BALIK_RENT_BONUS = 0.04;
+export const TUZEX_BALIK_BASE_COST = 3;
+export const TUZEX_BALIK_GROWTH = 1.45;
+
+export function tuzexBalikCost(owned: number): number {
+  return Math.max(3, Math.round(TUZEX_BALIK_BASE_COST * Math.pow(TUZEX_BALIK_GROWTH, owned)));
+}
+
+/**
+ * Bony into privatizační kupóny, at a deliberately dreadful rate — the point is
+ * that a late-game pile of bony is never quite worthless, not that it's a good
+ * deal. Only unlocked once privatizace is on the table.
+ */
+export const BONY_PER_KUPON = 15;
+
+/** One-time bony price of each unlockable diversion. */
+export const MINIGAME_COSTS: Record<MinigameId, number> = {
+  arkada: 0, // the svazák's arcade comes with the house
+  potrubi: 8,
+  azor: 12,
+};
 export const KAVA_HAPPINESS_BONUS = 15;
 export const TV_TARGET_BONUS = 10;
 /** Western washing machine: laundry regen 1.6 → 2.0. */
