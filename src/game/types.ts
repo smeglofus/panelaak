@@ -63,6 +63,13 @@ export interface Meta {
 /** Permanent Tuzex purchases (paid in bony). Káva is a repeatable consumable. */
 export type TuzexId = 'tv' | 'pracka' | 'digitalky';
 
+/**
+ * Tenant-card diversions. The svazák's arcade comes with the house; the other
+ * two are bought in Tuzex, which is what finally gives late-game bony somewhere
+ * to go.
+ */
+export type MinigameId = 'arkada' | 'potrubi' | 'azor';
+
 export type ProblemId = 'leak' | 'window' | 'radiator';
 
 export type MilestoneId =
@@ -222,6 +229,10 @@ export interface GameState {
   /** Tuzex vouchers — the rare second currency. */
   bony: number;
   tuzex: Record<TuzexId, boolean>;
+  /** Repeatable Tuzex hampers: the endless bony sink, each one lifts rent. */
+  baliky: number;
+  /** Which tenant-card diversions have been unlocked. */
+  minigames: Record<MinigameId, boolean>;
   /** Sídliště mega-projects built this era. */
   projects: Record<ProjectId, boolean>;
   /** The current pětiletka assignment, if any. */

@@ -1796,6 +1796,89 @@ button {
   background: #6d5a8a;
 }
 
+/* --- Kutilovo potrubí ------------------------------------------------------- */
+
+.modal-potrubi {
+  width: 320px;
+}
+
+.pipe-board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  width: 100%;
+  max-width: 240px;
+  margin: 10px auto 0;
+  padding: 3px;
+  background: #cfc6a8;
+  border: 2px solid #b9ad8e;
+}
+
+.pipe-cell {
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: #efe8d2;
+  cursor: pointer;
+}
+
+.pipe-cell:hover {
+  background: #e4dbbe;
+}
+
+.pipe-start {
+  box-shadow: inset 3px 0 0 #3f7fa0;
+}
+
+.pipe-end {
+  box-shadow: inset -3px 0 0 #b04a3c;
+}
+
+.pipe-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pipe-flow {
+  color: #3f7fa0;
+  font-weight: 800;
+}
+
+.pipe-legend {
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* --- Azor na obchůzce ------------------------------------------------------- */
+
+.modal-azor {
+  width: 360px;
+}
+
+.azor-board {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  max-width: 315px;
+  margin: 10px auto 0;
+  border: 2px solid #5e5e57;
+  background: #b7c9a8;
+}
+
+.azor-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.azor-wall {
+  background: #7a7a72;
+}
+
 /* --- Leaderboard ----------------------------------------------------------- */
 
 .lb-name {
