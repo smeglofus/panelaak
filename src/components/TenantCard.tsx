@@ -7,6 +7,10 @@ import { ARCHETYPE_EMOJI, CS } from '../game/content.cs';
 import ArkadaModal from './ArkadaModal';
 import PotrubiModal from './PotrubiModal';
 import AzorModal from './AzorModal';
+import JerabModal from './JerabModal';
+import BurzaModal from './BurzaModal';
+import KoncertModal from './KoncertModal';
+import FilozofModal from './FilozofModal';
 import { ARCHETYPES } from '../game/tenants';
 import { regimeFell } from '../game/calendar';
 import {
@@ -58,6 +62,10 @@ export default function TenantCard({ flat, onClose }: Props) {
   const [arkadaOpen, setArkadaOpen] = useState(false);
   const [potrubiOpen, setPotrubiOpen] = useState(false);
   const [azorOpen, setAzorOpen] = useState(false);
+  const [jerabOpen, setJerabOpen] = useState(false);
+  const [burzaOpen, setBurzaOpen] = useState(false);
+  const [koncertOpen, setKoncertOpen] = useState(false);
+  const [filozofOpen, setFilozofOpen] = useState(false);
   const evictionRunning = t?.evictionAt != null;
   const tier = !t ? 'meh' : t.happiness >= 66 ? 'happy' : t.happiness >= 33 ? 'meh' : 'sad';
 
@@ -194,6 +202,26 @@ export default function TenantCard({ flat, onClose }: Props) {
               🐕 {CS.azor.title}
             </button>
           )}
+          {t.archetype === 'shift' && game.minigames.jerab && (
+            <button type="button" className="btn btn-small btn-arkada" onClick={() => setJerabOpen(true)}>
+              🏗️ {CS.jerab.title}
+            </button>
+          )}
+          {t.archetype === 'vekslak' && game.minigames.burza && (
+            <button type="button" className="btn btn-small btn-arkada" onClick={() => setBurzaOpen(true)}>
+              💱 {CS.burza.title}
+            </button>
+          )}
+          {t.archetype === 'musician' && game.minigames.koncert && (
+            <button type="button" className="btn btn-small btn-arkada" onClick={() => setKoncertOpen(true)}>
+              🎻 {CS.koncert.title}
+            </button>
+          )}
+          {t.archetype === 'drunk' && game.minigames.filozof && (
+            <button type="button" className="btn btn-small btn-arkada" onClick={() => setFilozofOpen(true)}>
+              🚶 {CS.filozof.title}
+            </button>
+          )}
           {renoButton}
           {evictionRunning ? (
             <p className="eviction-pending">
@@ -229,6 +257,10 @@ export default function TenantCard({ flat, onClose }: Props) {
     {arkadaOpen && <ArkadaModal onClose={() => setArkadaOpen(false)} />}
     {potrubiOpen && <PotrubiModal onClose={() => setPotrubiOpen(false)} />}
     {azorOpen && <AzorModal onClose={() => setAzorOpen(false)} />}
+    {jerabOpen && <JerabModal onClose={() => setJerabOpen(false)} />}
+    {burzaOpen && <BurzaModal onClose={() => setBurzaOpen(false)} />}
+    {koncertOpen && <KoncertModal onClose={() => setKoncertOpen(false)} />}
+    {filozofOpen && <FilozofModal onClose={() => setFilozofOpen(false)} />}
     </>
   );
 }

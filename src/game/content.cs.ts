@@ -222,6 +222,90 @@ export const CS = {
       name: 'Azor na obchůzce',
       desc: 'Hra u důchodkyně: Azor sbírá kočky a utíká před Veřejnou bezpečností.',
     },
+    jerab: {
+      name: 'Panel na místo',
+      desc: 'Hra u jeřábnice: skládej panely na sebe. Za přesnost sleva na příští patro.',
+    },
+    burza: {
+      name: 'Bonová burza',
+      desc: 'Hra u veksláka: nakup levně, prodej draze. Platí se v bonech — a hlídá to VB.',
+    },
+    koncert: {
+      name: 'Domácí koncert',
+      desc: 'Hra u hudebníka: zahraj melodii po sluchu. Celý dům pookřeje.',
+    },
+    filozof: {
+      name: 'Cesta domů',
+      desc: 'Hra u pana Lojzy: doveď ho z hospody domů. Sousedi si toho všimnou.',
+    },
+  },
+
+  jerab: {
+    title: 'Panel na místo',
+    intro:
+      'Soudružka jeřábnice tě pustila do kabiny. „Panel se pustí, když je nad tím spodním. Co přečuhuje, to se uřízne — a máš míň místa na další.“',
+    controls: 'Mezerník nebo klik: pustit panel',
+    panels: 'Panelů',
+    drop: 'Pustit panel',
+    over: 'Panel spadl vedle. Mistr to viděl.',
+    reward: (pct: number) => `Panely složeny. Sleva na příští patro: ${pct} %.`,
+    banked: (pct: number) => `Máš nachystanou slevu ${pct} % na příští patro.`,
+    start: 'Do kabiny',
+    again: 'Ještě jednou',
+    cost: (e: number) => `Směna na jeřábu stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Na jeřáb takhle nemůžeš.',
+  },
+
+  burza: {
+    title: 'Bonová burza',
+    intro:
+      'Pan Karel rozložil na stole kurzovní lístek. „Kupuj, když je dole, prodávej, když je nahoře. A kdyby šla hlídka, tak jsme se tu bavili o fotbale.“',
+    controls: 'Kup a prodej, než vyprší čas. Při kontrole nesmíš mít zboží u sebe.',
+    capital: 'Kapitál',
+    price: 'Kurz',
+    holding: 'Držíš zboží',
+    buy: 'Koupit',
+    sell: 'Prodat',
+    raid: '🚨 Hlídka VB!',
+    raidLost: 'Hlídka ti sebrala zboží. Škoda.',
+    timeLeft: (s: number) => `Zbývá ${s} s`,
+    done: 'Konec obchodování.',
+    reward: (bony: number) => `Veksl vyšel: ${bony} bonů do kapsy.`,
+    noProfit: 'Prodělek. Pan Karel se tváří, že tě nezná.',
+    start: 'Začít obchodovat',
+    again: 'Ještě jedno kolo',
+    cost: (e: number) => `Obchodování stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Na veksl musíš mít hlavu.',
+  },
+
+  koncert: {
+    title: 'Domácí koncert',
+    intro:
+      'Mistr posadil housle na rameno. „Zahraju ti to a ty mi to zopakuješ. Poslouchej pořádně — a soused ať si klidně stěžuje.“',
+    controls: 'Klikej na noty ve stejném pořadí.',
+    round: (n: number) => `${n}. kolo`,
+    listen: 'Poslouchej…',
+    repeat: 'Zopakuj!',
+    wrong: 'Falešná nota. Mistr se tváří dotčeně.',
+    reward: (n: number) => `Dům měl koncert. Spokojenost +${n} všem.`,
+    start: 'Naladit housle',
+    again: 'Přídavek',
+    cost: (e: number) => `Koncert stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Na koncert nemáš náladu.',
+  },
+
+  filozof: {
+    title: 'Cesta domů',
+    intro:
+      'Pan Lojza vychází z hospody a míří k domu. „Já dojdu sám!“ Nedojde. Podrž ho v ose chodníku a vyhýbej se překážkám.',
+    controls: 'Šipky vlevo/vpravo: koriguj směr',
+    meters: 'Ušel',
+    fell: 'Pan Lojza usnul na lavičce. Zítra bude filozofovat o tom, proč.',
+    reward: (rep: number) => `Pan Lojza doma a bez úhony. Důvěra sousedů +${rep}.`,
+    start: 'Vyprovodit ho',
+    again: 'Znovu',
+    cost: (e: number) => `Doprovod stojí ${e} elánu.`,
+    tooTired: 'Málo elánu. Ať si dojde sám.',
   },
 
   balik: {

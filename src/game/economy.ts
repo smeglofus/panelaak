@@ -520,6 +520,73 @@ export const MINIGAME_COSTS: Record<MinigameId, number> = {
   arkada: 0, // the svazák's arcade comes with the house
   potrubi: 8,
   azor: 12,
+  jerab: 14,
+  burza: 18,
+  koncert: 10,
+  filozof: 9,
+};
+
+// --- Jeřábnice: panel na místo -------------------------------------------------
+// Deliberately does NOT pay in Kčs: it banks a discount on the next floor, which
+// pulls the player back into the main loop instead of just topping up the fund.
+
+export const JERAB_ENERGY_COST = 25;
+export const JERAB_DISCOUNT_PER_PANEL = 0.03;
+export const JERAB_MAX_DISCOUNT = 0.3;
+
+export function jerabDiscount(panels: number): number {
+  return Math.min(JERAB_MAX_DISCOUNT, JERAB_DISCOUNT_PER_PANEL * panels);
+}
+
+// --- Vekslák: bonová burza -----------------------------------------------------
+// The only diversion that pays in bony — the scarce currency, from the archetype
+// that deals in it.
+
+export const BURZA_ENERGY_COST = 30;
+/** Starting capital of one round, in "koruny" internal to the minigame. */
+export const BURZA_START_CAPITAL = 1000;
+/** Koruny of profit per bon paid out. */
+export const BURZA_PER_BON = 400;
+export const BURZA_MAX_BONY = 8;
+
+export function burzaReward(finalCapital: number): number {
+  const profit = finalCapital - BURZA_START_CAPITAL;
+  if (profit <= 0) return 0;
+  return Math.min(BURZA_MAX_BONY, Math.floor(profit / BURZA_PER_BON));
+}
+
+// --- Hudebník: domácí koncert --------------------------------------------------
+// Pays in mood for the whole house — a concert is not a transaction.
+
+export const KONCERT_ENERGY_COST = 15;
+export const KONCERT_HAPPINESS_PER_ROUND = 2;
+export const KONCERT_MAX_HAPPINESS = 20;
+
+export function koncertBonus(rounds: number): number {
+  return Math.min(KONCERT_MAX_HAPPINESS, KONCERT_HAPPINESS_PER_ROUND * rounds);
+}
+
+// --- Domácí filozof: cesta domů ------------------------------------------------
+// Pays in důvěra: getting Lojza home in one piece is what neighbours notice.
+
+export const FILOZOF_ENERGY_COST = 20;
+/** Metres walked per point of reputation. */
+export const FILOZOF_METERS_PER_REP = 40;
+export const FILOZOF_MAX_REP = 6;
+
+export function filozofReward(meters: number): number {
+  return Math.min(FILOZOF_MAX_REP, Math.floor(meters / FILOZOF_METERS_PER_REP));
+}
+
+/** Elán each diversion costs to sit down to, in one place. */
+export const MINIGAME_ENERGY: Record<MinigameId, number> = {
+  arkada: ARKADA_ENERGY_COST,
+  potrubi: POTRUBI_ENERGY_COST,
+  azor: AZOR_ENERGY_COST,
+  jerab: JERAB_ENERGY_COST,
+  burza: BURZA_ENERGY_COST,
+  koncert: KONCERT_ENERGY_COST,
+  filozof: FILOZOF_ENERGY_COST,
 };
 export const KAVA_HAPPINESS_BONUS = 15;
 export const TV_TARGET_BONUS = 10;

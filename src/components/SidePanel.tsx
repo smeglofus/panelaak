@@ -343,7 +343,7 @@ export default function SidePanel() {
       </div>
 
       {/* Unlockable diversions — bony buying content, not just percentages. */}
-      {(['potrubi', 'azor'] as MinigameId[]).map((id) => {
+      {(['potrubi', 'azor', 'jerab', 'burza', 'koncert', 'filozof'] as MinigameId[]).map((id) => {
         const owned = game.minigames[id];
         return (
           <div key={id} className={`upgrade${owned ? ' upgrade-owned' : ''}`}>
