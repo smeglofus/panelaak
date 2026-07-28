@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { useGame } from '../store';
 import { freshState, withFloors, withTenant } from './helpers';
 import { incomePerSec } from '../economy';
-import { OFFLINE_MIN_SECONDS } from '../offline';
+import { OFFLINE_MIN_SECONDS, OFFLINE_RATE } from '../offline';
 import type { GameState } from '../types';
 
 function seed(game: GameState) {
@@ -20,15 +20,31 @@ afterEach(() => {
 describe('tickOnce offline catch-up', () => {
   it('settles a long frozen gap as offline rent', () => {
     const g = withTenant(withFloors(freshState(), 1), 0);
-    expect(incomePerSec(g)).toBeGreaterThan(0);
+    const rate = incomePerSec(g);
+    expect(rate).toBeGreaterThan(0);
     seed({ ...g, money: 0, lastSaved: Date.now() - 3600 * 1000 }); // 1 h frozen
 
     useGame.getState().tickOnce();
 
     const st = useGame.getState();
+    // The hour is credited in full — the gap must not be swallowed…
+    expect(st.game.money).toBeGreaterThan(rate * OFFLINE_RATE * 3600 * 0.9);
+    // …but silently: the summary modal is for page loads, not for a tab the
+    // browser merely throttled (see store.throttle.test.ts).
+    expect(st.offlineSummary).toBeNull();
+  });
+
+  it('still shows the summary on the page-load path', () => {
+    // What onRehydrateStorage does: measure the absence once, with the player
+    // actually there to read it.
+    const g = withTenant(withFloors(freshState(), 1), 0);
+    seed({ ...g, money: 0, lastSaved: Date.now() - 3600 * 1000 });
+
+    useGame.getState().applyOfflineProgress();
+
+    const st = useGame.getState();
     expect(st.offlineSummary).not.toBeNull();
     expect(st.offlineSummary!.counted).toBeGreaterThanOrEqual(3599);
-    expect(st.game.money).toBeGreaterThan(0);
   });
 
   it('keeps ticking normally for a sub-threshold gap', () => {

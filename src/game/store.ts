@@ -100,7 +100,8 @@ interface PanelakStore {
   resolveChoice: (optionId: string) => void;
   importSave: (raw: string) => boolean;
   dismissOffline: () => void;
-  applyOfflineProgress: () => void;
+  /** Credit rent for elapsed wall-clock time. `silent` skips the summary modal. */
+  applyOfflineProgress: (silent?: boolean) => void;
   newGame: () => void;
 }
 
@@ -126,9 +127,17 @@ export const useGame = create<PanelakStore>()(
         // the last tick. A plain tick would advance a single second and stamp
         // lastSaved = now, silently swallowing the whole gap (the reason an
         // open tab left overnight earned nothing). Settle it as offline rent
-        // instead, exactly the path a reload takes.
+        // instead.
+        //
+        // Silently, though: a hidden tab is throttled to roughly one fire per
+        // minute, so raising the summary modal here would fire it after the
+        // first minute — and since an open modal refreshes lastSaved on every
+        // tick, the remaining hours would then be discarded, leaving the player
+        // with "Byl/a jste pryč 1 min." after a whole evening away. The modal
+        // belongs to page loads (onRehydrateStorage), where the elapsed time is
+        // measured once and the player is actually there to read it.
         if ((Date.now() - game.lastSaved) / 1000 >= OFFLINE_MIN_SECONDS) {
-          get().applyOfflineProgress();
+          get().applyOfflineProgress(true);
           return;
         }
         set({ game: { ...tick(game), lastSaved: Date.now() } });
@@ -438,7 +447,7 @@ export const useGame = create<PanelakStore>()(
 
       dismissOffline: () => set({ offlineSummary: null }),
 
-      applyOfflineProgress: () => {
+      applyOfflineProgress: (silent = false) => {
         const { game } = get();
         const elapsed = (Date.now() - game.lastSaved) / 1000;
         const summary = computeOffline(game, elapsed);
@@ -453,7 +462,9 @@ export const useGame = create<PanelakStore>()(
             totalEarned: game.totalEarned + summary.earned,
             lastSaved: Date.now(),
           },
-          offlineSummary: summary,
+          // Silent settles (a throttled background tab) only credit the rent —
+          // the house kept running, there is no absence to announce.
+          offlineSummary: silent ? null : summary,
         });
       },
 
