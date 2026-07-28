@@ -20,6 +20,7 @@ export default function LeaderboardPanel() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState(playerName());
   const [status, setStatus] = useState('');
+  const [sending, setSending] = useState(false);
 
   // Best of the richest completed era and the current era's running total —
   // so even a player who hasn't privatized yet has a meaningful score.
@@ -36,15 +37,26 @@ export default function LeaderboardPanel() {
   }, []);
 
   const submit = async () => {
+    if (sending) return;
+    setSending(true);
     setPlayerName(name);
     setStatus(CS.leaderboard.submitting);
-    const res = await submitScore({
-      score: myScore,
-      era: game.meta.prestigeLevel,
-      kupony: game.meta.records.kuponyEarnedTotal,
-    });
-    setStatus(res.ok ? CS.leaderboard.submitted(res.rank ?? 0) : CS.leaderboard.offline);
-    if (res.ok) void load();
+    try {
+      const res = await submitScore({
+        score: myScore,
+        era: game.meta.prestigeLevel,
+        kupony: game.meta.records.kuponyEarnedTotal,
+      });
+      if (res.ok) {
+        setStatus(CS.leaderboard.submitted(res.rank ?? 0));
+        void load();
+      } else {
+        // A refused submit is not a missing backend — say which it was.
+        setStatus(CS.leaderboard[res.reason]);
+      }
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -59,7 +71,12 @@ export default function LeaderboardPanel() {
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <button type="button" className="btn btn-brigade" onClick={() => void submit()}>
+      <button
+        type="button"
+        className="btn btn-brigade"
+        disabled={sending}
+        onClick={() => void submit()}
+      >
         {CS.leaderboard.submit}
       </button>
       {status && <p className="brigade-hint">{status}</p>}

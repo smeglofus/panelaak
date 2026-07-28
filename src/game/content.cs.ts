@@ -233,6 +233,8 @@ export const CS = {
     submitting: 'Odesílám…',
     submitted: (rank: number) => `Odesláno! Jsi na ${rank}. místě.`,
     offline: 'Žebříček je nedostupný (běží jen s backendem).',
+    rateLimited: 'Moment, soudruhu. Skóre se přijímá jednou za pár vteřin.',
+    rejected: 'Skóre neprošlo kontrolou u výboru. Zkus to znovu.',
     loading: 'Načítám…',
     empty: 'Zatím žádná skóre. Buď první, soudruhu.',
     refresh: 'Obnovit',

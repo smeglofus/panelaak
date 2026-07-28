@@ -211,6 +211,8 @@ export const EN: typeof CS = {
     submitting: 'Submitting…',
     submitted: (rank: number) => `Submitted! You are ranked #${rank}.`,
     offline: 'Leaderboard unavailable (needs the backend).',
+    rateLimited: 'One moment, comrade. Scores are accepted once every few seconds.',
+    rejected: 'The committee rejected the score. Try again.',
     loading: 'Loading…',
     empty: 'No scores yet. Be the first, comrade.',
     refresh: 'Refresh',

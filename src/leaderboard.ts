@@ -54,23 +54,39 @@ export function setPlayerName(name: string): void {
   localStorage.setItem(NAME_KEY, name.slice(0, 24));
 }
 
+/**
+ * Why a submit didn't land. `offline` means we couldn't reach the backend at
+ * all; the other two mean it answered and said no — which is a different story
+ * for the player, and must not be reported as "the leaderboard is unavailable".
+ */
+export type SubmitFailure = 'offline' | 'rateLimited' | 'rejected';
+
+export type SubmitResult = { ok: true; rank?: number } | { ok: false; reason: SubmitFailure };
+
+/** Maps an HTTP status the backend answered with onto the player-facing reason. */
+export function failureFromStatus(status: number): SubmitFailure {
+  if (status === 429) return 'rateLimited'; // POST_COOLDOWN_MS on the server
+  if (status >= 400 && status < 500) return 'rejected';
+  return 'offline'; // 5xx — the backend is there but broken, same story as down
+}
+
 export async function submitScore(input: {
   score: number;
   era: number;
   kupony: number;
-}): Promise<{ ok: boolean; rank?: number }> {
-  if (!apiConfigured()) return { ok: false };
+}): Promise<SubmitResult> {
+  if (!apiConfigured()) return { ok: false, reason: 'offline' };
   try {
     const res = await fetch(apiUrl('/api/score'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerId: playerId(), name: playerName(), ...input }),
     });
-    if (!res.ok) return { ok: false };
+    if (!res.ok) return { ok: false, reason: failureFromStatus(res.status) };
     const data = (await res.json()) as { rank?: number };
     return { ok: true, rank: data.rank };
   } catch {
-    return { ok: false };
+    return { ok: false, reason: 'offline' };
   }
 }
 
