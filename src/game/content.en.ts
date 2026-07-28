@@ -654,13 +654,50 @@ export const EN: typeof CS = {
       desc: 'Peace and fresh air (+8 happiness), but far from the bus stop: −5 % rent, slower move-ins.',
       factor: 'Forest behind the house',
     },
+    {
+      name: 'Peace Square',
+      desc: 'Downtown: +20 % rent and the fastest move-ins. But bustle and noise (−4 happiness).',
+      factor: 'Busy centre',
+    },
+    {
+      name: 'By the Station',
+      desc: 'Trains day and night: fastest move-ins and +10 % rent, but rattle and grime (−8 happiness).',
+      factor: 'Rattling trains',
+    },
+    {
+      name: 'On the Hill',
+      desc: 'A view and fresh air (+8 happiness), slightly higher rent. But uphill and remote — slower move-ins.',
+      factor: 'Hilltop view',
+    },
+    {
+      name: 'By the Reservoir',
+      desc: 'Water and weekend calm (+14 happiness). But out of the way: −10 % rent and few takers.',
+      factor: 'Reservoir nearby',
+    },
+    {
+      name: 'Industrial Zone',
+      desc: 'Among the halls and slag heaps: +35 % rent from the workers, but smog and grey (−14 happiness).',
+      factor: 'Smog from the halls',
+    },
+    {
+      name: 'Old Town',
+      desc: 'Historic core: prestige, +25 % rent and +5 happiness. But cramped and flats are hard to fill.',
+      factor: 'Historic core',
+    },
+    {
+      name: 'On the Outskirts',
+      desc: 'A green field at the city edge: calm and space (+12 happiness). But the end of the world — low rent, poor transport.',
+      factor: 'End of the world',
+    },
   ],
 
   sidliste: {
     title: 'Housing estate',
-    buyPlot: (name: string, kcs: string) => `Buy the plot ${name} (${kcs})`,
-    needFullHouse: 'The housing office will allot another plot once the current house is fully built (8 floors).',
-    complete: 'The estate is complete. Three houses, one administrator, zero peace.',
+    pickParcel: (kcs: string) => `Pick a parcel for the new house (cost ${kcs}):`,
+    buildHere: 'Build',
+    capReached: (cap: number) =>
+      `The housing office won't permit more houses this era (limit ${cap}). Each privatization unlocks one more parcel.`,
+    allBuilt: 'All ten parcels are built up. An estate as it should be.',
     plotBought: (name: string) =>
       `Plot allotted: ${name}. The excavators arrived immediately — a rare sight indeed.`,
   },

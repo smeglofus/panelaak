@@ -46,9 +46,10 @@ import {
   KAVA_HAPPINESS_BONUS,
   FLAT_RENO_MAX,
   flatRenoCost,
-  MAX_BUILDINGS,
   MAX_FLOORS,
-  PLOT_COSTS,
+  buildingCap,
+  plotCost,
+  TOTAL_PARCELS,
   PROBLEM_DEFS,
   PROJECT_COSTS,
   PROJECT_ORDER,
@@ -79,7 +80,7 @@ interface PanelakStore {
   setLanguage: (lang: Lang) => void;
   setActiveBuilding: (index: number) => void;
   buyFloor: (bIdx: number) => void;
-  buyPlot: () => void;
+  buyPlot: (site: number) => void;
   buyUpgrade: (id: UpgradeId) => void;
   buyCourtyard: (id: CourtyardId) => void;
   hireCaretaker: () => void;
@@ -200,20 +201,21 @@ export const useGame = create<PanelakStore>()(
         set({ game: next });
       },
 
-      buyPlot: () => {
+      buyPlot: (site) => {
         const { game } = get();
         const count = game.buildings.length;
-        if (count >= MAX_BUILDINGS) return;
-        if (game.buildings[count - 1].floors < MAX_FLOORS) return;
-        const cost = PLOT_COSTS[count];
+        if (count >= buildingCap(game.meta.prestigeLevel)) return; // era limit
+        if (site < 0 || site >= TOTAL_PARCELS) return;
+        if (game.buildings.some((b) => b.site === site)) return; // parcel taken
+        const cost = plotCost(count);
         if (game.money < cost) return;
-        const building = createBuilding(count, count, allFlats(game).length);
+        const building = createBuilding(site, count, allFlats(game).length);
         let next: GameState = {
           ...game,
           money: game.money - cost,
           buildings: [...game.buildings, building],
         };
-        next = addLog(next, 'milestone', CS.sidliste.plotBought(CS.sites[count].name));
+        next = addLog(next, 'milestone', CS.sidliste.plotBought(CS.sites[site].name));
         set({ game: next, activeBuilding: count });
       },
 

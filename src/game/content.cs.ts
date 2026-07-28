@@ -677,13 +677,50 @@ export const CS = {
       desc: 'Klid a vzduch (+8 spokojenosti), ale daleko od zastávky: −5 % nájmu, pomalejší nastěhování.',
       factor: 'Les za domem',
     },
+    {
+      name: 'Náměstí Míru',
+      desc: 'Centrum: +20 % nájmu a bleskové nastěhování. Ale shon a hluk (−4 spokojenosti).',
+      factor: 'Rušné centrum',
+    },
+    {
+      name: 'U Nádraží',
+      desc: 'Vlaky ve dne v noci: nejrychlejší nastěhování a +10 % nájmu, ale rachot a špína (−8 spokojenosti).',
+      factor: 'Rachot vlaků',
+    },
+    {
+      name: 'Na Kopci',
+      desc: 'Výhled a čerstvý vzduch (+8 spokojenosti), mírně vyšší nájem. Ale do kopce a daleko — pomalejší nastěhování.',
+      factor: 'Výhled z kopce',
+    },
+    {
+      name: 'U Přehrady',
+      desc: 'Voda a víkendová pohoda (+14 spokojenosti). Ale z ruky: −10 % nájmu a málokdo se sem táhne.',
+      factor: 'Přehrada za rohem',
+    },
+    {
+      name: 'Průmyslová zóna',
+      desc: 'Mezi halami a haldami: +35 % nájmu od dělníků, ale smog a šeď (−14 spokojenosti).',
+      factor: 'Smog z hal',
+    },
+    {
+      name: 'Staré Město',
+      desc: 'Historické jádro: prestiž, +25 % nájmu i +5 spokojenosti. Ale úzko a byty se shánějí těžko.',
+      factor: 'Historické jádro',
+    },
+    {
+      name: 'Na Periferii',
+      desc: 'Zelená louka na kraji města: klid a prostor (+12 spokojenosti). Ale konec světa — nízký nájem a špatná doprava.',
+      factor: 'Konec světa',
+    },
   ],
 
   sidliste: {
     title: 'Sídliště',
-    buyPlot: (name: string, kcs: string) => `Koupit parcelu ${name} (${kcs})`,
-    needFullHouse: 'Další parcelu OPBH přidělí, až bude stávající dům plně vystavěn (8 pater).',
-    complete: 'Sídliště je kompletní. Tři domy, jeden správce, žádný klid.',
+    pickParcel: (kcs: string) => `Vyber parcelu pro nový dům (cena ${kcs}):`,
+    buildHere: 'Postavit',
+    capReached: (cap: number) =>
+      `Víc domů OPBH v téhle éře nepovolí (limit ${cap}). Každá privatizace odemkne o parcelu víc.`,
+    allBuilt: 'Všech deset parcel je zastavěno. Sídliště jak má být.',
     plotBought: (name: string) =>
       `Přidělena parcela ${name}. Bagry přijely hned — to se hned tak nevidí.`,
   },

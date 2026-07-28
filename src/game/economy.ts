@@ -40,8 +40,6 @@ export function floorCost(ownedFloors: number, betonLevel = 0): number {
 
 // --- Sídliště (multiple buildings) ---------------------------------------------
 
-export const MAX_BUILDINGS = 3;
-
 export interface SiteDef {
   /** Rent multiplier for tenants living there. */
   rentMult: number;
@@ -51,15 +49,45 @@ export interface SiteDef {
   moveInMult: number;
 }
 
-/** Building sites, by Building.site index. Flavor lives in content.cs.ts. */
+/**
+ * The ten parcels of the sídliště, by Building.site index. The správce picks
+ * which one to build on; each trades rent, mood and how fast the pořadník moves.
+ * The first three keep their historic tuning (older saves reference them by
+ * index). Flavor lives in content.cs.ts.
+ */
 export const SITES: readonly SiteDef[] = [
-  { rentMult: 1, targetDelta: 0, moveInMult: 1 }, // Jiráskova — the original
-  { rentMult: 1.15, targetDelta: -5, moveInMult: 1.1 }, // U Fabriky — smoke, but jobs
-  { rentMult: 0.95, targetDelta: 8, moveInMult: 0.8 }, // U Lesa — quiet, remote
+  { rentMult: 1, targetDelta: 0, moveInMult: 1 }, // 0 Jiráskova — the original
+  { rentMult: 1.15, targetDelta: -5, moveInMult: 1.1 }, // 1 U Fabriky — smoke, but jobs
+  { rentMult: 0.95, targetDelta: 8, moveInMult: 0.8 }, // 2 U Lesa — quiet, remote
+  { rentMult: 1.2, targetDelta: -4, moveInMult: 1.3 }, // 3 Náměstí Míru — central, busy
+  { rentMult: 1.1, targetDelta: -8, moveInMult: 1.35 }, // 4 U Nádraží — transport, noise
+  { rentMult: 1.05, targetDelta: 8, moveInMult: 0.8 }, // 5 Na Kopci — air & view, uphill
+  { rentMult: 0.9, targetDelta: 14, moveInMult: 0.75 }, // 6 U Přehrady — recreation, remote
+  { rentMult: 1.35, targetDelta: -14, moveInMult: 0.95 }, // 7 Průmyslová zóna — rich, grim
+  { rentMult: 1.25, targetDelta: 5, moveInMult: 0.7 }, // 8 Staré Město — prestige, hard to fill
+  { rentMult: 0.85, targetDelta: 12, moveInMult: 0.65 }, // 9 Na Periferii — cheap, calm, isolated
 ];
 
-/** Price of the next plot (index = current number of buildings). */
-export const PLOT_COSTS = [0, 25000, 100000];
+/** Total parcels on the map — the hard ceiling on how many houses can exist. */
+export const TOTAL_PARCELS = SITES.length;
+
+/** Houses buildable in the first era; each era (privatizace) unlocks one more. */
+export const BUILDINGS_BASE = 3;
+
+/** How many houses the správce may own at the given prestige (éra) level. */
+export function buildingCap(prestigeLevel: number): number {
+  return Math.min(TOTAL_PARCELS, BUILDINGS_BASE + prestigeLevel);
+}
+
+// The první dům is free (the starting one). Each further plot costs more.
+export const PLOT_BASE_COST = 25000;
+export const PLOT_COST_GROWTH = 3;
+
+/** Price of a new plot when the správce already owns `ownedCount` houses. */
+export function plotCost(ownedCount: number): number {
+  if (ownedCount < 1) return 0;
+  return Math.round(PLOT_BASE_COST * Math.pow(PLOT_COST_GROWTH, ownedCount - 1));
+}
 
 // --- Money ------------------------------------------------------------------
 
