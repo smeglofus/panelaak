@@ -144,10 +144,12 @@ export default function JerabModal({ onClose }: { onClose: () => void }) {
                   style={{ left: hookX, width: currentW, height: PANEL_H }}
                 />
               )}
+              {/* The container is column-reverse, so the first child sits at
+                  the bottom — feed it oldest-first and the base stays down. */}
               <div className="jerab-stack">
-                {[...shown].reverse().map((p, i) => (
+                {shown.map((p, i) => (
                   <div
-                    key={stack.length - i}
+                    key={stack.length - shown.length + i}
                     className="jerab-panel"
                     style={{ left: p.x, width: p.w, height: PANEL_H }}
                   />
