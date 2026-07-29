@@ -6,11 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { filozofReward, MINIGAME_ENERGY } from '../game/economy';
+import { GLYPH, hits, LANE_H, LANE_W } from '../game/filozof';
 
-const LANE_W = 260;
-const LANE_H = 260;
-const LOJZA_W = 22;
-const OBSTACLE_W = 34;
 const TICK_MS = 60;
 /** Metres of pavement per tick. */
 const SPEED = 1.6;
@@ -63,7 +60,7 @@ export default function FilozofModal({ onClose }: { onClose: () => void }) {
 
       setX((cur) => {
         const next = cur + swayRef.current + leanRef.current * 3.2;
-        if (next < LOJZA_W / 2 || next > LANE_W - LOJZA_W / 2) {
+        if (next < GLYPH / 2 || next > LANE_W - GLYPH / 2) {
           setOver(true); // off the kerb
           return cur;
         }
@@ -79,7 +76,7 @@ export default function FilozofModal({ onClose }: { onClose: () => void }) {
         if (Math.random() < 0.14) {
           moved.push({
             y: -40,
-            x: 20 + Math.random() * (LANE_W - 40 - OBSTACLE_W),
+            x: 20 + Math.random() * (LANE_W - 40 - GLYPH),
             kind: KINDS[Math.floor(Math.random() * KINDS.length)],
           });
         }
@@ -89,18 +86,10 @@ export default function FilozofModal({ onClose }: { onClose: () => void }) {
     return () => window.clearInterval(id);
   }, [playing, over]);
 
-  // Collisions are checked against the drawn positions.
+  // Collisions are judged against the drawn glyphs (see game/filozof.ts).
   useEffect(() => {
     if (!playing || over) return;
-    const lojzaY = LANE_H - 34;
-    for (const o of obstacles) {
-      const hitY = o.y + OBSTACLE_W > lojzaY && o.y < lojzaY + 26;
-      const hitX = Math.abs(o.x + OBSTACLE_W / 2 - x) < (OBSTACLE_W + LOJZA_W) / 2 - 6;
-      if (hitY && hitX) {
-        setOver(true);
-        return;
-      }
-    }
+    if (obstacles.some((o) => hits(x, o))) setOver(true);
   }, [obstacles, x, playing, over]);
 
   useEffect(() => {
@@ -167,7 +156,7 @@ export default function FilozofModal({ onClose }: { onClose: () => void }) {
                   {o.kind}
                 </span>
               ))}
-              <span className="filozof-lojza" style={{ left: x - LOJZA_W / 2 }}>
+              <span className="filozof-lojza" style={{ left: x - GLYPH / 2 }}>
                 🥴
               </span>
             </div>
