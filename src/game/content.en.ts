@@ -317,9 +317,14 @@ export const EN: typeof CS = {
     title: 'Azor on patrol',
     intro:
       'Paní Vlasta lets Azor out into the courtyard. "Let him run. But mind the Public Security lot, they have no love for dogs."',
-    controls: 'Arrows: run · collect every cat · do not get caught',
+    controls: 'Arrows: run · collect every cat · do not get caught. Each courtyard cleared brings a harder one.',
     cats: 'Cats',
     caught: 'Caught!',
+    round: (n: number) => `courtyard ${n}`,
+    summary: (dvorky: number, kocky: number) =>
+      dvorky > 0
+        ? `${dvorky} courtyards cleared, ${kocky} cats.`
+        : `Not a single courtyard cleared.`,
     win: 'Courtyard inspected. Azor is content.',
     win2: (kcs: number) => `Paní Vlasta chipped in ${kcs} Kčs.`,
     start: 'Let Azor out',

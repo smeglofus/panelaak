@@ -2211,3 +2211,8 @@ button {
   font-size: 22px;
   line-height: 1;
 }
+
+.azor-round {
+  font-weight: 800;
+  color: var(--red);
+}
