@@ -263,9 +263,11 @@ export function potrubiReward(moves: number): number {
 export const AZOR_ENERGY_COST = 25;
 /** Paid per cat rounded up in the courtyard. */
 export const AZOR_MONEY_PER_CAT = 45;
+/** Clearing a whole courtyard pays on top of the cats it held. */
+export const AZOR_ROUND_BONUS = 120;
 
-export function azorReward(cats: number): number {
-  return AZOR_MONEY_PER_CAT * cats;
+export function azorReward(cats: number, roundsCleared = 0): number {
+  return AZOR_MONEY_PER_CAT * cats + AZOR_ROUND_BONUS * roundsCleared;
 }
 
 // --- Repeatable upgrades (the endless money sink) ------------------------------

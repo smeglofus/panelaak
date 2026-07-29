@@ -339,9 +339,14 @@ export const CS = {
     title: 'Azor na obchůzce',
     intro:
       'Paní Vlasta pustila Azora na dvorek. „Jen ať se proběhne. Ale pozor na ty od Veřejné bezpečnosti, ti nemají psy rádi.“',
-    controls: 'Šipky: běhej · seber všechny kočky · nenech se chytit',
+    controls: 'Šipky: běhej · seber všechny kočky · nenech se chytit. Za každý přebraný dvorek přijde další, těžší.',
     cats: 'Kočky',
     caught: 'Chycen!',
+    round: (n: number) => `${n}. dvorek`,
+    summary: (dvorky: number, kocky: number) =>
+      dvorky > 0
+        ? `Přebráno ${dvorky} dvorků, ${kocky} koček.`
+        : `Ani jeden dvorek se nepodařilo přebrat.`,
     win: 'Dvorek přebrán. Azor je spokojený.',
     win2: (kcs: number) => `Paní Vlasta dala na přilepšenou ${kcs} Kčs.`,
     start: 'Pustit Azora',

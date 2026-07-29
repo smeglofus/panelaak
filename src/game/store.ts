@@ -95,8 +95,8 @@ interface PanelakStore {
   rewardPotrubi: (moves: number) => string | null;
   /** Pay elán to let Azor out. */
   startAzor: () => boolean;
-  /** Bank the money for the cats Azor rounded up. */
-  rewardAzor: (cats: number) => void;
+  /** Bank the money for the cats Azor rounded up and the courtyards cleared. */
+  rewardAzor: (cats: number, roundsCleared: number) => void;
   /** Start a diversion for elán. Returns false when too tired or paused. */
   startMinigame: (id: MinigameId) => boolean;
   /** Bank a crane run: panels stacked become a discount on the next floor. */
@@ -240,9 +240,9 @@ export const useGame = create<PanelakStore>()(
         return true;
       },
 
-      rewardAzor: (cats) => {
+      rewardAzor: (cats, roundsCleared) => {
         const { game } = get();
-        const reward = azorReward(cats);
+        const reward = azorReward(cats, roundsCleared);
         if (reward <= 0) return;
         const next = addLog(
           { ...game, money: game.money + reward, totalEarned: game.totalEarned + reward },

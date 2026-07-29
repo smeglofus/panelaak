@@ -1,54 +1,29 @@
-// Azor na obchůzce — round up every cat in the courtyard without walking into
-// the Public Security. Unlocked in Tuzex, played from a pensioner's card.
-// Tile-based: Azor steps on arrow keys, the others step on a timer.
+// Azor na obchůzce — clear the courtyard of cats without walking into the
+// Public Security. Clearing one hands you the next: a different courtyard, more
+// cats, more officers, quicker feet. It only ends when they catch you.
 
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { CS } from '../game/content.cs';
 import { useGame } from '../game/store';
 import { AZOR_ENERGY_COST, azorReward } from '../game/economy';
-
-// '#' wall, '.' open. A courtyard between the blocks: benches, a sandbox and
-// the eternal shortcut across the grass.
-const MAZE = [
-  '###############',
-  '#.....#.......#',
-  '#.###.#.#####.#',
-  '#.#...........#',
-  '#.#.#.#####.#.#',
-  '#...#...#...#.#',
-  '#.#####.#.###.#',
-  '#.......#.....#',
-  '#.###.#####.#.#',
-  '#.#...........#',
-  '###############',
-];
-const ROWS = MAZE.length;
-const COLS = MAZE[0].length;
-
-const CAT_COUNT = 5;
-const STEP_MS = 320;
+import {
+  AZOR_COLS as COLS,
+  AZOR_ROWS as ROWS,
+  isOpen,
+  mazeForRound,
+  openTiles,
+  roundSetup,
+} from '../game/azor';
 
 interface Pos {
   r: number;
   c: number;
 }
 
-const open = (r: number, c: number) =>
-  r >= 0 && r < ROWS && c >= 0 && c < COLS && MAZE[r][c] !== '#';
-
 const same = (a: Pos, b: Pos) => a.r === b.r && a.c === b.c;
 
-/** Every open tile, so we can scatter the cast without landing in a wall. */
-function openTiles(): Pos[] {
-  const out: Pos[] = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) if (open(r, c)) out.push({ r, c });
-  }
-  return out;
-}
-
 /** Breadth-first step toward a target — how the VB closes in. */
-function chaseStep(from: Pos, to: Pos): Pos {
+function chaseStep(maze: string[], from: Pos, to: Pos): Pos {
   const key = (p: Pos) => p.r * COLS + p.c;
   const prev = new Map<number, Pos>();
   const seen = new Set<number>([key(from)]);
@@ -63,13 +38,12 @@ function chaseStep(from: Pos, to: Pos): Pos {
       [0, 1],
     ]) {
       const nxt = { r: cur.r + dr, c: cur.c + dc };
-      if (!open(nxt.r, nxt.c) || seen.has(key(nxt))) continue;
+      if (!isOpen(maze, nxt.r, nxt.c) || seen.has(key(nxt))) continue;
       seen.add(key(nxt));
       prev.set(key(nxt), cur);
       queue.push(nxt);
     }
   }
-  // Walk the chain back to the tile right after `from`.
   let cur = to;
   if (!prev.has(key(cur)) && !same(cur, from)) return from; // unreachable
   while (prev.has(key(cur))) {
@@ -81,16 +55,15 @@ function chaseStep(from: Pos, to: Pos): Pos {
 }
 
 /** Cats wander, but prefer not to walk into Azor's mouth. */
-function flee(from: Pos, away: Pos): Pos {
+function flee(maze: string[], from: Pos, away: Pos): Pos {
   const options = [
     { r: from.r - 1, c: from.c },
     { r: from.r + 1, c: from.c },
     { r: from.r, c: from.c - 1 },
     { r: from.r, c: from.c + 1 },
     from,
-  ].filter((p) => open(p.r, p.c));
+  ].filter((p) => isOpen(maze, p.r, p.c));
   const dist = (p: Pos) => Math.abs(p.r - away.r) + Math.abs(p.c - away.c);
-  // Mostly step away from the dog, sometimes dither — a cat is a cat.
   if (Math.random() < 0.7) {
     options.sort((a, b) => dist(b) - dist(a));
     return options[0];
@@ -99,61 +72,71 @@ function flee(from: Pos, away: Pos): Pos {
 }
 
 interface State {
+  round: number;
+  maze: string[];
   azor: Pos;
   cats: Pos[];
   vb: Pos[];
+  /** Cats caught across every courtyard this run. */
   caught: number;
+  /** Courtyards fully cleared this run. */
+  cleared: number;
   over: boolean;
-  won: boolean;
 }
 
 type Action = { type: 'reset' } | { type: 'move'; dr: number; dc: number } | { type: 'tick' };
 
-function init(): State {
-  const tiles = openTiles();
-  const pick = () => tiles[Math.floor(Math.random() * tiles.length)];
+/** Lays out one courtyard: Azor in his corner, the rest scattered well away. */
+function buildRound(round: number, carry: { caught: number; cleared: number }): State {
+  const maze = mazeForRound(round);
+  const setup = roundSetup(round);
+  const tiles = openTiles(maze);
   const azor = { r: 1, c: 1 };
   const far = (p: Pos) => Math.abs(p.r - azor.r) + Math.abs(p.c - azor.c) > 6;
-  const cats: Pos[] = [];
-  while (cats.length < CAT_COUNT) {
-    const p = pick();
-    if (far(p) && !cats.some((c) => same(c, p))) cats.push(p);
-  }
-  const vb: Pos[] = [];
-  while (vb.length < 2) {
-    const p = pick();
-    if (far(p) && !vb.some((v) => same(v, p))) vb.push(p);
-  }
-  return { azor, cats, vb, caught: 0, over: false, won: false };
+  const pool = tiles.filter(far);
+  const taken: Pos[] = [];
+  const take = () => {
+    // Sample without collisions; the pool is far larger than what we need.
+    for (let guard = 0; guard < 200; guard++) {
+      const p = pool[Math.floor(Math.random() * pool.length)];
+      if (!taken.some((t) => same(t, p))) {
+        taken.push(p);
+        return p;
+      }
+    }
+    return pool[0];
+  };
+  const cats = Array.from({ length: setup.cats }, take);
+  const vb = Array.from({ length: setup.vb }, take);
+  return { round, maze, azor, cats, vb, caught: carry.caught, cleared: carry.cleared, over: false };
 }
 
+/** Resolve catches and collisions after any move. */
 function settle(s: State): State {
-  // Cats Azor is standing on are rounded up; a VB on the same tile ends it.
   const remaining = s.cats.filter((c) => !same(c, s.azor));
   const caught = s.caught + (s.cats.length - remaining.length);
-  const nabbed = s.vb.some((v) => same(v, s.azor));
-  return {
-    ...s,
-    cats: remaining,
-    caught,
-    over: nabbed || remaining.length === 0,
-    won: !nabbed && remaining.length === 0,
-  };
+  if (s.vb.some((v) => same(v, s.azor))) {
+    return { ...s, cats: remaining, caught, over: true };
+  }
+  if (remaining.length === 0) {
+    // Courtyard clear — straight on to the next one.
+    return buildRound(s.round + 1, { caught, cleared: s.cleared + 1 });
+  }
+  return { ...s, cats: remaining, caught };
 }
 
 function reducer(state: State, action: Action): State {
-  if (action.type === 'reset') return init();
+  if (action.type === 'reset') return buildRound(1, { caught: 0, cleared: 0 });
   if (state.over) return state;
 
   if (action.type === 'move') {
     const next = { r: state.azor.r + action.dr, c: state.azor.c + action.dc };
-    if (!open(next.r, next.c)) return state;
+    if (!isOpen(state.maze, next.r, next.c)) return state;
     return settle({ ...state, azor: next });
   }
 
-  // 'tick' — everyone else moves.
-  const cats = state.cats.map((c) => flee(c, state.azor));
-  const vb = state.vb.map((v) => chaseStep(v, state.azor));
+  const cats = state.cats.map((c) => flee(state.maze, c, state.azor));
+  const vb = state.vb.map((v) => chaseStep(state.maze, v, state.azor));
   return settle({ ...state, cats, vb });
 }
 
@@ -162,10 +145,13 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
   const startAzor = useGame((s) => s.startAzor);
   const rewardAzor = useGame((s) => s.rewardAzor);
 
-  const [state, dispatch] = useReducer(reducer, null, init);
-  const [playing, setPlaying] = useReducerPlaying();
+  const [state, dispatch] = useReducer(reducer, null, () =>
+    buildRound(1, { caught: 0, cleared: 0 }),
+  );
+  const [playing, setPlaying] = useState(false);
 
   const canAfford = energy >= AZOR_ENERGY_COST;
+  const setup = roundSetup(state.round);
 
   const begin = () => {
     if (!startAzor()) return;
@@ -173,12 +159,12 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
     setPlaying(true);
   };
 
-  // The rest of the courtyard moves on its own clock.
+  // Everyone else moves on the round's own clock, which quickens as it goes.
   useEffect(() => {
     if (!playing || state.over) return;
-    const id = window.setInterval(() => dispatch({ type: 'tick' }), STEP_MS);
+    const id = window.setInterval(() => dispatch({ type: 'tick' }), setup.stepMs);
     return () => window.clearInterval(id);
-  }, [playing, state.over]);
+  }, [playing, state.over, setup.stepMs]);
 
   useEffect(() => {
     if (!playing || state.over) return;
@@ -201,17 +187,12 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
   // Pay out once, the moment the walk ends.
   useEffect(() => {
     if (playing && state.over) {
-      rewardAzor(state.caught);
+      rewardAzor(state.caught, state.cleared);
       setPlaying(false);
     }
-  }, [playing, state.over, state.caught, rewardAzor, setPlaying]);
+  }, [playing, state.over, state.caught, state.cleared, rewardAzor]);
 
   const started = playing || state.over;
-
-  const cells = useMemo(() => {
-    const grid: string[][] = MAZE.map((row) => row.split(''));
-    return grid;
-  }, []);
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -236,22 +217,24 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <div className="arkada-hud">
+              <span className="azor-round">{CS.azor.round(state.round)}</span>
               <span>
-                {CS.azor.cats}: <strong>{state.caught}</strong> / {CAT_COUNT}
+                🐈 <strong>{state.cats.length}</strong>
+              </span>
+              <span>
+                {CS.azor.cats}: <strong>{state.caught}</strong>
               </span>
             </div>
-            <div
-              className="azor-board"
-              style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}
-            >
-              {cells.flatMap((row, r) =>
-                row.map((tile, c) => {
+            <div className="azor-board" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}>
+              {Array.from({ length: ROWS }).flatMap((_, r) =>
+                Array.from({ length: COLS }).map((__, c) => {
                   const here = { r, c };
+                  const wall = state.maze[r][c] === '#';
                   const isAzor = same(state.azor, here);
                   const isCat = state.cats.some((x) => same(x, here));
                   const isVb = state.vb.some((x) => same(x, here));
                   return (
-                    <div key={`${r}-${c}`} className={`azor-cell${tile === '#' ? ' azor-wall' : ''}`}>
+                    <div key={`${r}-${c}`} className={`azor-cell${wall ? ' azor-wall' : ''}`}>
                       {isAzor ? '🐕' : isVb ? '👮' : isCat ? '🐈' : ''}
                     </div>
                   );
@@ -262,8 +245,8 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
             {state.over && (
               <>
                 <p className="arkada-over">
-                  {state.won ? CS.azor.win : CS.azor.caught}{' '}
-                  {state.caught > 0 && CS.azor.win2(azorReward(state.caught))}
+                  {CS.azor.caught} {CS.azor.summary(state.cleared, state.caught)}{' '}
+                  {state.caught > 0 && CS.azor.win2(azorReward(state.caught, state.cleared))}
                 </p>
                 <div className="modal-actions">
                   <button type="button" className="btn" disabled={!canAfford} onClick={begin}>
@@ -280,10 +263,4 @@ export default function AzorModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-}
-
-// Small local state hook kept separate so the component body stays readable.
-function useReducerPlaying(): [boolean, (v: boolean) => void] {
-  const [v, set] = useReducer((_: boolean, next: boolean) => next, false);
-  return [v, set];
 }
